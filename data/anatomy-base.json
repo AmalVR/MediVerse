@@ -1,0 +1,85 @@
+[
+  {
+    "partId": "skeleton",
+    "name": "Skeleton",
+    "latinName": "Skeletos",
+    "system": "SKELETAL",
+    "modelPath": "/models/skeleton/skeleton-full.glb",
+    "lodLevels": {
+      "low": "/models/skeleton/skeleton-full-low.glb",
+      "medium": "/models/skeleton/skeleton-full-med.glb",
+      "high": "/models/skeleton/skeleton-full.glb"
+    },
+    "synonyms": [
+      { "synonym": "skeleton", "language": "en", "priority": 10 },
+      { "synonym": "skeletal system", "language": "en", "priority": 9 },
+      { "synonym": "bones", "language": "en", "priority": 8 },
+      { "synonym": "esqueleto", "language": "es", "priority": 9 }
+    ]
+  },
+  {
+    "partId": "skull",
+    "name": "Skull",
+    "latinName": "Cranium",
+    "system": "SKELETAL",
+    "parentId": "skeleton",
+    "modelPath": "/models/skeleton/skull.glb",
+    "synonyms": [
+      { "synonym": "skull", "language": "en", "priority": 10 },
+      { "synonym": "cranium", "language": "en", "priority": 9 },
+      { "synonym": "head bone", "language": "en", "priority": 5 }
+    ]
+  },
+  {
+    "partId": "heart",
+    "name": "Heart",
+    "latinName": "Cor",
+    "system": "CARDIOVASCULAR",
+    "modelPath": "/models/cardiovascular/cardiovascular-full.glb",
+    "lodLevels": {
+      "low": "/models/cardiovascular/cardiovascular-full-low.glb",
+      "medium": "/models/cardiovascular/cardiovascular-full-med.glb",
+      "high": "/models/cardiovascular/cardiovascular-full.glb"
+    },
+    "synonyms": [
+      { "synonym": "heart", "language": "en", "priority": 10 },
+      { "synonym": "cardiac muscle", "language": "en", "priority": 8 },
+      { "synonym": "cor", "language": "la", "priority": 7 },
+      { "synonym": "corazón", "language": "es", "priority": 9 },
+      { "synonym": "心臓", "language": "ja", "priority": 9 }
+    ]
+  },
+  {
+    "partId": "lungs",
+    "name": "Lungs",
+    "latinName": "Pulmones",
+    "system": "RESPIRATORY",
+    "modelPath": "/models/respiratory/visceral-full.glb",
+    "synonyms": [
+      { "synonym": "lungs", "language": "en", "priority": 10 },
+      { "synonym": "respiratory organs", "language": "en", "priority": 6 },
+      { "synonym": "pulmones", "language": "es", "priority": 9 }
+    ]
+  },
+  {
+    "partId": "lung_left",
+    "name": "Left Lung",
+    "latinName": "Pulmo Sinister",
+    "system": "RESPIRATORY",
+    "parentId": "lungs",
+    "modelPath": "/models/respiratory/lung-left.glb",
+    "synonyms": [{ "synonym": "left lung", "language": "en", "priority": 10 }]
+  },
+  {
+    "partId": "brain",
+    "name": "Brain",
+    "latinName": "Cerebrum",
+    "system": "NERVOUS",
+    "modelPath": "/models/nervous/nervous-full.glb",
+    "synonyms": [
+      { "synonym": "brain", "language": "en", "priority": 10 },
+      { "synonym": "cerebrum", "language": "en", "priority": 8 },
+      { "synonym": "cerebro", "language": "es", "priority": 9 }
+    ]
+  }
+]

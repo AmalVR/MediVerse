@@ -1,0 +1,134 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: mediverse-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mediverse
+      POSTGRES_USER: mediverse
+      POSTGRES_PASSWORD: mediverse_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - mediverse-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mediverse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Server
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: mediverse-api
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://mediverse:mediverse_password@postgres:5432/mediverse
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/config/gcp-service-account.json
+      - VITE_GCP_PROJECT_ID=${VITE_GCP_PROJECT_ID}
+      - GCP_DIALOGFLOW_AGENT_ID=${GCP_DIALOGFLOW_AGENT_ID}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./config:/app/config:ro
+      - ./public/models:/app/public/models:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mediverse-network
+    command: npm run server:api
+
+  # WebSocket Server
+  websocket:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: mediverse-ws
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - WS_PORT=3001
+      - DATABASE_URL=postgresql://mediverse:mediverse_password@postgres:5432/mediverse
+      - VITE_APP_URL=http://localhost:5173
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mediverse-network
+    command: npm run server:ws
+
+  # Frontend (for production)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: mediverse-frontend
+    restart: unless-stopped
+    environment:
+      - VITE_API_URL=http://localhost:3000/api
+      - VITE_WS_URL=http://localhost:3001
+      - VITE_GCP_PROJECT_ID=${VITE_GCP_PROJECT_ID}
+      - VITE_MODELS_BASE_URL=/models
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+      - websocket
+    networks:
+      - mediverse-network
+
+  # Redis (for session management and caching)
+  redis:
+    image: redis:7-alpine
+    container_name: mediverse-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - mediverse-network
+    command: redis-server --appendonly yes
+
+  # pgAdmin (optional - for database management)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: mediverse-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@mediverse.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - mediverse-network
+    profiles:
+      - tools
+
+networks:
+  mediverse-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local

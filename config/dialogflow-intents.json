@@ -1,0 +1,230 @@
+{
+  "intents": [
+    {
+      "displayName": "anatomy.show",
+      "trainingPhrases": [
+        "show the {anatomyPart}",
+        "display {anatomyPart}",
+        "let me see {anatomyPart}",
+        "show me {anatomyPart}",
+        "can you show {anatomyPart}",
+        "I want to see {anatomyPart}"
+      ],
+      "parameters": [
+        {
+          "name": "anatomyPart",
+          "entityType": "@anatomy-part",
+          "required": true,
+          "prompts": ["Which anatomical part would you like to see?"]
+        }
+      ],
+      "fulfillmentText": "Showing $anatomyPart"
+    },
+    {
+      "displayName": "anatomy.hide",
+      "trainingPhrases": [
+        "hide {anatomyPart}",
+        "hide the {anatomyPart}",
+        "remove {anatomyPart}",
+        "don't show {anatomyPart}",
+        "turn off {anatomyPart}"
+      ],
+      "parameters": [
+        {
+          "name": "anatomyPart",
+          "entityType": "@anatomy-part",
+          "required": true
+        }
+      ],
+      "fulfillmentText": "Hiding $anatomyPart"
+    },
+    {
+      "displayName": "anatomy.highlight",
+      "trainingPhrases": [
+        "highlight {anatomyPart}",
+        "highlight the {anatomyPart}",
+        "focus on {anatomyPart}",
+        "emphasize {anatomyPart}",
+        "point out {anatomyPart}"
+      ],
+      "parameters": [
+        {
+          "name": "anatomyPart",
+          "entityType": "@anatomy-part",
+          "required": true
+        }
+      ],
+      "fulfillmentText": "Highlighting $anatomyPart"
+    },
+    {
+      "displayName": "anatomy.isolate",
+      "trainingPhrases": [
+        "isolate {anatomyPart}",
+        "isolate the {anatomyPart}",
+        "show only {anatomyPart}",
+        "only {anatomyPart}",
+        "just {anatomyPart}",
+        "hide everything except {anatomyPart}"
+      ],
+      "parameters": [
+        {
+          "name": "anatomyPart",
+          "entityType": "@anatomy-part",
+          "required": true
+        }
+      ],
+      "fulfillmentText": "Isolating $anatomyPart"
+    },
+    {
+      "displayName": "anatomy.rotate",
+      "trainingPhrases": [
+        "rotate {direction}",
+        "turn {direction}",
+        "spin {direction}",
+        "rotate the model {direction}",
+        "turn it {direction}"
+      ],
+      "parameters": [
+        {
+          "name": "direction",
+          "entityType": "@direction",
+          "required": true,
+          "prompts": ["Which direction?"]
+        }
+      ],
+      "fulfillmentText": "Rotating $direction"
+    },
+    {
+      "displayName": "anatomy.zoom",
+      "trainingPhrases": [
+        "zoom {zoomDirection}",
+        "zoom {zoomDirection} on {anatomyPart}",
+        "get closer",
+        "move back",
+        "zoom out",
+        "zoom in"
+      ],
+      "parameters": [
+        {
+          "name": "zoomDirection",
+          "entityType": "@zoom-direction",
+          "required": true
+        },
+        {
+          "name": "anatomyPart",
+          "entityType": "@anatomy-part",
+          "required": false
+        }
+      ],
+      "fulfillmentText": "Zooming $zoomDirection"
+    },
+    {
+      "displayName": "anatomy.slice",
+      "trainingPhrases": [
+        "create cross section",
+        "slice the model",
+        "cross section {axis}",
+        "cut through {axis}",
+        "section view"
+      ],
+      "parameters": [
+        {
+          "name": "axis",
+          "entityType": "@axis",
+          "required": false
+        }
+      ],
+      "fulfillmentText": "Creating cross-section"
+    },
+    {
+      "displayName": "anatomy.reset",
+      "trainingPhrases": [
+        "reset",
+        "reset view",
+        "go back to start",
+        "default view",
+        "reset everything",
+        "clear all"
+      ],
+      "parameters": [],
+      "fulfillmentText": "Resetting view"
+    },
+    {
+      "displayName": "anatomy.system",
+      "trainingPhrases": [
+        "show {system} system",
+        "display {system} system",
+        "{system} system",
+        "show the {system}",
+        "I want to see the {system}"
+      ],
+      "parameters": [
+        {
+          "name": "system",
+          "entityType": "@anatomy-system",
+          "required": true,
+          "prompts": ["Which system would you like to see?"]
+        }
+      ],
+      "fulfillmentText": "Showing $system system"
+    }
+  ],
+  "entities": [
+    {
+      "displayName": "anatomy-part",
+      "entities": [
+        {
+          "value": "skeleton",
+          "synonyms": ["skeleton", "skeletal system", "bones"]
+        },
+        { "value": "skull", "synonyms": ["skull", "cranium", "head bone"] },
+        { "value": "femur", "synonyms": ["femur", "thigh bone", "leg bone"] },
+        { "value": "heart", "synonyms": ["heart", "cardiac muscle", "cor"] },
+        { "value": "lungs", "synonyms": ["lungs", "respiratory organs"] },
+        { "value": "brain", "synonyms": ["brain", "cerebrum"] },
+        { "value": "biceps", "synonyms": ["biceps", "arm muscle"] }
+      ]
+    },
+    {
+      "displayName": "anatomy-system",
+      "entities": [
+        { "value": "skeletal", "synonyms": ["skeletal", "skeleton", "bones"] },
+        { "value": "muscular", "synonyms": ["muscular", "muscles"] },
+        { "value": "nervous", "synonyms": ["nervous", "neural"] },
+        {
+          "value": "cardiovascular",
+          "synonyms": ["cardiovascular", "circulatory", "heart"]
+        },
+        {
+          "value": "respiratory",
+          "synonyms": ["respiratory", "breathing", "lungs"]
+        },
+        { "value": "digestive", "synonyms": ["digestive", "gastrointestinal"] }
+      ]
+    },
+    {
+      "displayName": "direction",
+      "entities": [
+        { "value": "left", "synonyms": ["left", "counterclockwise"] },
+        { "value": "right", "synonyms": ["right", "clockwise"] },
+        { "value": "up", "synonyms": ["up", "upward"] },
+        { "value": "down", "synonyms": ["down", "downward"] }
+      ]
+    },
+    {
+      "displayName": "zoom-direction",
+      "entities": [
+        { "value": "in", "synonyms": ["in", "closer", "forward"] },
+        { "value": "out", "synonyms": ["out", "back", "away"] }
+      ]
+    },
+    {
+      "displayName": "axis",
+      "entities": [
+        { "value": "x", "synonyms": ["x", "horizontal", "lateral"] },
+        { "value": "y", "synonyms": ["y", "vertical", "superior-inferior"] },
+        { "value": "z", "synonyms": ["z", "sagittal", "front-back"] }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+# Unity WebGL builds go here
+# Build to:
+#   - pc-build/     (Desktop version)
+#   - mobile-build/ (Mobile version)
+# See UNITY_BUILD_GUIDE.md for instructions
+

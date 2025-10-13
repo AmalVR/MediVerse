@@ -1,0 +1,14 @@
+# 3D Models Directory
+
+Place Z-Anatomy GLTF/GLB models here.
+
+See docs/Z_ANATOMY_MODELS.md for setup instructions.
+
+Recommended structure:
+- skeleton/
+- cardiovascular/
+- respiratory/
+- nervous/
+- muscular/
+- digestive/
+

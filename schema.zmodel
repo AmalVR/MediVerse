@@ -1,0 +1,157 @@
+// ZenStack schema for MediVerse - Anatomy Learning Platform
+// This generates Prisma schema + enhanced type-safe APIs
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+generator zod {
+    provider = "zod-prisma-types"
+}
+
+// Anatomy Ontology - Core anatomical parts database
+model AnatomyPart {
+    id          String           @id @default(cuid())
+    partId      String           @unique // e.g., "femur_left", "heart_ventricle_left"
+    name        String   // Primary name
+    latinName   String?  // Latin anatomical name
+    meshName    String?  // Original Z-Anatomy mesh name for raycasting (e.g., "Left lung.j")
+    system      AnatomySystem // Which system it belongs to
+    parentId    String?  // For hierarchical parts
+    parent      AnatomyPart?     @relation("PartHierarchy", fields: [parentId], references: [id])
+    children    AnatomyPart[]    @relation("PartHierarchy")
+  
+    // 3D Model metadata
+    modelPath   String?  // Path to GLTF/GLB file
+    lodLevels   Json?    // LOD model paths: { low: "...", medium: "...", high: "..." }
+    boundingBox Json?    // Bounding box for camera positioning
+  
+    // Synonyms and aliases for NLP matching
+    synonyms    AnatomySynonym[]
+
+    createdAt   DateTime         @default(now())
+    updatedAt   DateTime         @updatedAt
+
+    @@index([system])
+    @@index([partId])
+}
+
+// Synonyms for NLP name matching (multilingual support)
+model AnatomySynonym {
+    id       String      @id @default(cuid())
+    partId   String
+    part     AnatomyPart @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+    synonym  String   // e.g., "heart", "cardiac muscle", "corazón", "心臓"
+    language String      @default("en") // ISO language code
+    priority Int         @default(0) // Higher priority = preferred match
+
+    @@unique([partId, synonym, language])
+    @@index([synonym])
+}
+
+// Teaching sessions
+model TeachingSession {
+    id              String           @id @default(cuid())
+    code            String           @unique // 6-char join code
+    teacherId       String
+    title           String
+    isActive        Boolean          @default(true)
+  
+    // Current viewer state (synced to students)
+    highlightedPart String?
+    cameraPosition  Json?    // { x, y, z }
+    modelRotation   Json?    // { x, y, z }
+    visibleSystems  String[] // Array of visible system names (no default for arrays in ZenStack)
+    slicePosition   Json?    // Cross-section slice data
+
+    notes           SessionNote[]
+    students        SessionStudent[]
+    commands        VoiceCommand[]
+
+    createdAt       DateTime         @default(now())
+    updatedAt       DateTime         @updatedAt
+    endedAt         DateTime?
+
+    @@index([code])
+    @@index([isActive])
+}
+
+// Students in a session
+model SessionStudent {
+    id        String          @id @default(cuid())
+    sessionId String
+    session   TeachingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+    studentId String   // Anonymous or auth-based
+    joinedAt  DateTime        @default(now())
+
+    @@unique([sessionId, studentId])
+}
+
+// Session notes (students can take notes)
+model SessionNote {
+    id        String          @id @default(cuid())
+    sessionId String
+    session   TeachingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+    studentId String
+    content   String          @db.Text
+    timestamp DateTime        @default(now())
+
+    @@index([sessionId, studentId])
+}
+
+// Voice command logs for analytics
+model VoiceCommand {
+    id         String           @id @default(cuid())
+    sessionId  String?
+    session    TeachingSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+    transcript String           @db.Text
+    intent     String?  // Dialogflow intent name
+    action     String?  // "show", "hide", "rotate", "zoom", etc.
+    target     String?  // Part ID or direction
+    confidence Float?   // NLP confidence score
+
+    success    Boolean          @default(true)
+    errorMsg   String?
+
+    userId     String?  // Teacher or student ID
+    createdAt  DateTime         @default(now())
+
+    @@index([sessionId])
+    @@index([createdAt])
+}
+
+// Anatomical systems enum
+enum AnatomySystem {
+    SKELETAL
+    MUSCULAR
+    NERVOUS
+    CARDIOVASCULAR
+    RESPIRATORY
+    DIGESTIVE
+    URINARY
+    REPRODUCTIVE
+    ENDOCRINE
+    LYMPHATIC
+    INTEGUMENTARY
+}
+
+// Command actions enum
+enum CommandAction {
+    SHOW
+    HIDE
+    HIGHLIGHT
+    ISOLATE
+    ROTATE
+    ZOOM
+    SLICE
+    RESET
+    SYSTEM_TOGGLE
+}
+

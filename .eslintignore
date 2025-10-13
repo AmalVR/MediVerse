@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+.history/
+*.config.js
+*.config.ts
+vite.config.ts
+tailwind.config.ts
+postcss.config.js
+.zenstack/
+public/
+

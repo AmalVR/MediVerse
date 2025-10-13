@@ -1,0 +1,71 @@
+version: "3.8"
+
+# Development Docker Compose
+# Run with: docker-compose -f docker-compose.dev.yml up
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: mediverse-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mediverse
+      POSTGRES_USER: mediverse
+      POSTGRES_PASSWORD: mediverse_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - mediverse-dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mediverse"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: mediverse-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - mediverse-dev
+
+  # pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: mediverse-pgadmin-dev
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: dev@mediverse.local
+      PGADMIN_DEFAULT_PASSWORD: dev
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_dev_data:/var/lib/pgadmin
+    networks:
+      - mediverse-dev
+    depends_on:
+      - postgres
+
+networks:
+  mediverse-dev:
+    driver: bridge
+
+volumes:
+  postgres_dev_data:
+  pgadmin_dev_data:
+# For development:
+# 1. Run: docker-compose -f docker-compose.dev.yml up -d
+# 2. Run frontend locally: npm run dev
+# 3. Run API locally: npm run server:api
+# 4. Run WebSocket locally: npm run server:ws
+#
+# This gives you hot reload while using Docker for infrastructure
+

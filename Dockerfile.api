@@ -1,0 +1,49 @@
+# Dockerfile for API and WebSocket servers
+
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY server/package*.json ./server/
+
+# Install dependencies
+RUN npm ci
+RUN cd server && npm ci
+
+# Copy source code
+COPY . .
+
+# Generate Prisma client
+RUN npm run prisma:generate
+
+# Build TypeScript
+RUN cd server && npm run build
+
+# Production image
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/server/package*.json ./server/
+
+# Install production dependencies only
+RUN npm ci --omit=dev
+RUN cd server && npm ci --omit=dev
+
+# Copy built files and necessary source
+COPY --from=builder /app/server/dist ./server/dist
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/schema.zmodel ./
+
+# Create config directory
+RUN mkdir -p /app/config
+
+EXPOSE 3000 3001
+
+CMD ["npm", "run", "server"]
+
