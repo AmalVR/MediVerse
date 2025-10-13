@@ -50,7 +50,13 @@ config/gcp-service-account.json
 # Server build
 server/dist/
 
-# 3D Models (optional - uncomment to exclude from git)
+# 3D Models - Source files (too large for GitHub)
+public/models/**/*.blend
+public/models/**/*.blend1
+public/models/**/*.blend2
+public/models/Z-Anatomy/
+
+# 3D Models - Exported files (uncomment if models are too large)
 # public/models/**/*.glb
 # public/models/**/*.gltf
 
@@ -59,3 +65,7 @@ server/dist/
 
 # History
 .history/
+
+# Unity Builds (large files)
+public/unity/**/Build/*.data.unityweb
+public/unity/**/Build/*.wasm.unityweb
