@@ -1,17 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UnityAnatomyViewer } from "@/components/UnityAnatomyViewer";
-import { SystemSelector } from "@/components/SystemSelector";
-import { CacheManager } from "@/components/CacheManager";
-import { VoiceInput } from "@/components/VoiceInput";
+import { SettingsPanel } from "@/components/SettingsPanel";
+import { AIInteractivePanel } from "@/components/AIInteractivePanel";
 import { useToast } from "@/components/ui/use-toast";
 import { anatomyAPI } from "@/lib/api/anatomy-api";
+import type { ViewerState } from "@/types/anatomy";
 import { sessionSync } from "@/lib/websocket/session-sync";
-import { Copy, Users, LogOut } from "lucide-react";
+import { Copy, Users, LogOut, Maximize, Settings } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function Teacher() {
   const navigate = useNavigate();
@@ -20,10 +21,36 @@ export default function Teacher() {
   const [sessionId, setSessionId] = useState("");
   const [sessionTitle, setSessionTitle] = useState("");
   const [isSessionActive, setIsSessionActive] = useState(false);
-  const [highlightedPart, setHighlightedPart] = useState<string>();
-  const [cameraPos, setCameraPos] = useState({ x: 0, y: 2, z: 18 });
-  const [rotation, setRotation] = useState({ x: 0, y: 0, z: 0 });
-  const [visibleSystems, setVisibleSystems] = useState<string[]>(["skeleton"]); // Default to skeleton
+  // Unity handles part highlighting internally
+  const unityRef = useRef<{
+    executeCommand: (command: { action: string; target: string }) => void;
+  }>();
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showControls, setShowControls] = useState(false);
+  const viewerContainerRef = useRef<HTMLDivElement>(null);
+
+  // Handle fullscreen
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      viewerContainerRef.current?.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
 
   const generateCode = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -78,57 +105,24 @@ export default function Teacher() {
     });
   };
 
-  const toggleSystem = (system: string) => {
-    setVisibleSystems(
-      (prev) =>
-        prev.includes(system)
-          ? prev.filter((s) => s !== system) // Deselect
-          : [...prev, system] // Add to selection (multiple allowed)
-    );
-  };
-
   const handleVoiceCommand = async (command: {
     action: string;
     target: string;
   }) => {
     console.log("Voice command:", command);
 
-    // Update local state
-    if (command.action === "show") {
-      setHighlightedPart(command.target);
-    } else if (command.action === "rotate") {
-      const delta = 0.5;
-      if (command.target === "left")
-        setRotation((r) => ({ ...r, y: r.y + delta }));
-      if (command.target === "right")
-        setRotation((r) => ({ ...r, y: r.y - delta }));
-      if (command.target === "up")
-        setRotation((r) => ({ ...r, x: r.x + delta }));
-      if (command.target === "down")
-        setRotation((r) => ({ ...r, x: r.x - delta }));
-    } else if (command.action === "zoom") {
-      const delta = command.target === "in" ? -1 : 1;
-      setCameraPos((p) => ({
-        ...p,
-        z: Math.max(3, Math.min(20, p.z + delta)),
-      }));
-    }
+    // Forward command to Unity
+    unityRef.current?.executeCommand(command);
 
     // Update session via WebSocket and API for students to see
     if (sessionId) {
       try {
-        const viewerState = {
-          cameraPosition: cameraPos,
-          modelRotation: rotation,
-          highlightedPart: command.target,
-          visibleSystems: [],
-        };
-
         // Broadcast via WebSocket for real-time updates
-        sessionSync.updateViewerState(sessionId, viewerState);
+        const state: ViewerState = { command };
+        sessionSync.updateViewerState(sessionId, state);
 
         // Also persist to database
-        await anatomyAPI.updateSessionState(sessionId, viewerState);
+        await anatomyAPI.updateSessionState(sessionId, state);
       } catch (error) {
         console.error("Error updating session:", error);
       }
@@ -188,72 +182,80 @@ export default function Teacher() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-            <div className="lg:col-span-2 space-y-4 order-2 lg:order-1">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <span className="text-base sm:text-lg">
-                      Session: {sessionTitle}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs sm:text-sm font-mono bg-primary text-primary-foreground px-2 sm:px-3 py-1 rounded">
-                        {sessionCode}
-                      </span>
-                      <Button size="sm" variant="outline" onClick={copyCode}>
-                        <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
-                      </Button>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px] sm:h-[400px] lg:h-[500px]">
-                    <UnityAnatomyViewer
-                      highlightedPart={highlightedPart}
-                      onPartClick={(part) => console.log("Clicked:", part)}
-                      onReady={() => console.log("Unity viewer ready")}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+          <div className="flex flex-col h-[calc(100vh-8rem)]">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-semibold">
+                  Session: {sessionTitle}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-mono bg-primary text-primary-foreground px-3 py-1 rounded">
+                    {sessionCode}
+                  </span>
+                  <Button size="sm" variant="outline" onClick={copyCode}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowControls(!showControls)}
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Controls
+                  </Button>
+                  <SettingsPanel />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleFullscreen}
+                  >
+                    <Maximize className="h-4 w-4 mr-2" />
+                    {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                  </Button>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-4 order-1 lg:order-2">
-              <SystemSelector
-                selectedSystems={visibleSystems}
-                onSystemToggle={toggleSystem}
-              />
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Voice Controls</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <VoiceInput onCommand={handleVoiceCommand} />
-
-                  <div className="mt-4 p-4 bg-muted rounded-lg">
-                    <h4 className="font-semibold text-sm mb-2">
-                      Example Commands:
-                    </h4>
-                    <ul className="text-xs space-y-1 text-muted-foreground">
-                      <li>• "Show the skeleton"</li>
-                      <li>• "Highlight the heart"</li>
-                      <li>• "Rotate left"</li>
-                      <li>• "Zoom in"</li>
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <CacheManager />
-
-              <Button
-                onClick={endSession}
-                variant="destructive"
-                className="w-full"
+            {/* Main Content */}
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-4 min-h-0">
+              {/* Viewer */}
+              <div
+                ref={viewerContainerRef}
+                className="relative bg-black/5 rounded-xl overflow-hidden"
               >
-                End Session
-              </Button>
+                <UnityAnatomyViewer
+                  onReady={() => console.log("Unity viewer ready")}
+                />
+              </div>
+
+              {/* Side Panel */}
+              <div
+                className={cn(
+                  "flex flex-col min-h-0 transition-transform duration-300 lg:translate-x-0",
+                  showControls ? "translate-x-0" : "translate-x-full"
+                )}
+              >
+                {/* AI Interactive Panel */}
+                <div className="flex-1 min-h-0">
+                  <AIInteractivePanel onCommand={handleVoiceCommand} />
+                </div>
+
+                {/* End Session Button */}
+                <div className="mt-4">
+                  <Button
+                    onClick={endSession}
+                    variant="destructive"
+                    className="w-full"
+                  >
+                    End Session
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         )}

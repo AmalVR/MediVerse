@@ -14,7 +14,7 @@ export default function Index() {
           <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4">
             <Brain className="h-8 w-8 sm:h-12 sm:w-12 text-primary" />
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
-              Z-Anatomy Live
+              MediVerse AI
             </h1>
           </div>
           <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">

@@ -9,56 +9,20 @@ import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
 interface UnityAnatomyViewerProps {
-  highlightedPart?: string;
-  onPartClick?: (partName: string) => void;
   onReady?: () => void;
 }
 
-export function UnityAnatomyViewer({
-  highlightedPart,
-  onPartClick,
-  onReady,
-}: UnityAnatomyViewerProps) {
+export function UnityAnatomyViewer({ onReady }: UnityAnatomyViewerProps) {
   const [buildType] = useState(() => detectUnityBuild());
   const [deviceInfo] = useState(() => getDeviceInfo());
   const buildPath = getUnityBuildPath(buildType);
 
-  const {
-    unityProvider,
-    isLoaded,
-    loadingProgression,
-    sendMessage,
-    addEventListener,
-    removeEventListener,
-  } = useUnityContext({
+  const { unityProvider, isLoaded, loadingProgression } = useUnityContext({
     loaderUrl: `${buildPath}/Build/pc-build.loader.js`,
     dataUrl: `${buildPath}/Build/pc-build.data.unityweb`,
     frameworkUrl: `${buildPath}/Build/pc-build.framework.js.unityweb`,
     codeUrl: `${buildPath}/Build/pc-build.wasm.unityweb`,
   });
-
-  // Send highlight command to Unity when highlightedPart changes
-  useEffect(() => {
-    if (isLoaded && highlightedPart) {
-      sendMessage("GameManager", "HighlightPart", highlightedPart);
-    }
-  }, [isLoaded, highlightedPart, sendMessage]);
-
-  // Listen for part click events from Unity
-  useEffect(() => {
-    const handlePartClicked = (partName: string) => {
-      console.log("Unity: Part clicked:", partName);
-      if (onPartClick) {
-        onPartClick(partName);
-      }
-    };
-
-    addEventListener("PartClicked", handlePartClicked);
-
-    return () => {
-      removeEventListener("PartClicked", handlePartClicked);
-    };
-  }, [addEventListener, removeEventListener, onPartClick]);
 
   // Notify parent when Unity is ready
   useEffect(() => {
@@ -121,6 +85,3 @@ export function UnityAnatomyViewer({
     </div>
   );
 }
-
-// Re-export Unity commands hook from lib
-export { useUnityCommands } from "@/lib/unity-commands";

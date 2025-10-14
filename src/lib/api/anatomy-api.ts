@@ -1,253 +1,161 @@
-// Type-safe API layer for anatomy operations
+/**
+ * Anatomy API Types
+ */
+export interface AnatomyAPI {
+  joinSession: (code: string) => Promise<APIResponse>;
+  createSession: (title: string, teacherId: string) => Promise<APIResponse>;
+  updateSessionState: (
+    sessionId: string,
+    state: Partial<ViewerState>
+  ) => Promise<APIResponse>;
+  endSession: (sessionId: string) => Promise<APIResponse>;
+  processVoiceCommand: (transcript: string) => Promise<APIResponse>;
+}
 
-import type {
-  AnatomyPart,
-  AnatomySynonym,
-  VoiceCommandResult,
-  ViewerState,
-  SessionState,
-  AnatomySystem,
-} from "@/types/anatomy";
+export interface ViewerState {
+  command?: {
+    action: string;
+    target: string;
+  };
+}
 
-// API Response wrapper
-interface APIResponse<T> {
+export interface APIResponse {
   success: boolean;
-  data?: T;
+  data?: any;
   error?: string;
 }
 
-class AnatomyAPI {
-  private baseURL: string;
-
-  constructor(baseURL = import.meta.env.VITE_API_URL || "/api") {
-    this.baseURL = baseURL;
-  }
-
-  /**
-   * Fetch anatomy parts by system
-   */
-  async getPartsBySystem(
-    system: AnatomySystem
-  ): Promise<APIResponse<AnatomyPart[]>> {
+/**
+ * Anatomy API Client
+ */
+export const anatomyAPI: AnatomyAPI = {
+  joinSession: async (code: string) => {
     try {
-      const response = await fetch(
-        `${this.baseURL}/anatomy/parts?system=${system}`
-      );
-      const data = await response.json();
-      return { success: true, data };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  }
-
-  /**
-   * Search anatomy parts
-   */
-  async searchParts(
-    query: string,
-    limit = 10
-  ): Promise<APIResponse<AnatomyPart[]>> {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/anatomy/search?q=${encodeURIComponent(
-          query
-        )}&limit=${limit}`
-      );
-      const data = await response.json();
-      return { success: true, data };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  }
-
-  /**
-   * Get part by ID
-   */
-  async getPartById(partId: string): Promise<APIResponse<AnatomyPart>> {
-    try {
-      const response = await fetch(`${this.baseURL}/anatomy/parts/${partId}`);
-      const data = await response.json();
-      return { success: true, data };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  }
-
-  /**
-   * Get all synonyms for a part
-   */
-  async getSynonyms(partId: string): Promise<APIResponse<AnatomySynonym[]>> {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/anatomy/parts/${partId}/synonyms`
-      );
-      const data = await response.json();
-      return { success: true, data };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  }
-
-  /**
-   * Process voice command via Dialogflow
-   */
-  async processVoiceCommand(
-    transcript: string
-  ): Promise<APIResponse<VoiceCommandResult>> {
-    try {
-      const response = await fetch(`${this.baseURL}/voice/process`, {
+      const response = await fetch(`http://localhost:3000/api/sessions/join`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code }),
       });
+
       const data = await response.json();
-      return { success: true, data };
+      return {
+        success: response.ok,
+        data: response.ok ? data : undefined,
+        error: !response.ok ? data.error : undefined,
+      };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
       };
     }
-  }
+  },
 
-  /**
-   * Get audio feedback for command
-   */
-  async getVoiceFeedback(text: string): Promise<APIResponse<Blob>> {
+  createSession: async (title: string, teacherId: string) => {
     try {
-      const response = await fetch(`${this.baseURL}/voice/feedback`, {
+      const response = await fetch("http://localhost:3000/api/sessions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-      const blob = await response.blob();
-      return { success: true, data: blob };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  }
-
-  /**
-   * Create teaching session
-   */
-  async createSession(
-    title: string,
-    teacherId: string
-  ): Promise<APIResponse<SessionState>> {
-    try {
-      const response = await fetch(`${this.baseURL}/sessions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ title, teacherId }),
       });
+
       const data = await response.json();
-      return { success: true, data };
+      return {
+        success: response.ok,
+        data: response.ok ? data : undefined,
+        error: !response.ok ? data.error : undefined,
+      };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
       };
     }
-  }
+  },
 
-  /**
-   * Join session by code
-   */
-  async joinSession(
-    code: string,
-    studentId: string
-  ): Promise<APIResponse<SessionState>> {
-    try {
-      const response = await fetch(`${this.baseURL}/sessions/join`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, studentId }),
-      });
-      const data = await response.json();
-      return { success: true, data };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  }
-
-  /**
-   * Update session viewer state
-   */
-  async updateSessionState(
+  updateSessionState: async (
     sessionId: string,
-    viewerState: Partial<ViewerState>
-  ): Promise<APIResponse<SessionState>> {
+    state: Partial<ViewerState>
+  ) => {
     try {
       const response = await fetch(
-        `${this.baseURL}/sessions/${sessionId}/state`,
+        `http://localhost:3000/api/sessions/${sessionId}/state`,
         {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ viewerState }),
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(state),
         }
       );
+
       const data = await response.json();
-      return { success: true, data };
+      return {
+        success: response.ok,
+        data: response.ok ? data : undefined,
+        error: !response.ok ? data.error : undefined,
+      };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
       };
     }
-  }
+  },
 
-  /**
-   * End session
-   */
-  async endSession(sessionId: string): Promise<APIResponse<void>> {
-    try {
-      await fetch(`${this.baseURL}/sessions/${sessionId}/end`, {
-        method: "POST",
-      });
-      return { success: true };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  }
-
-  /**
-   * Get session analytics
-   */
-  async getSessionAnalytics(sessionId: string): Promise<APIResponse<any>> {
+  endSession: async (sessionId: string) => {
     try {
       const response = await fetch(
-        `${this.baseURL}/sessions/${sessionId}/analytics`
+        `http://localhost:3000/api/sessions/${sessionId}`,
+        {
+          method: "DELETE",
+        }
       );
+
       const data = await response.json();
-      return { success: true, data };
+      return {
+        success: response.ok,
+        data: response.ok ? data : undefined,
+        error: !response.ok ? data.error : undefined,
+      };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
       };
     }
-  }
-}
+  },
 
-export const anatomyAPI = new AnatomyAPI();
+  processVoiceCommand: async (transcript: string) => {
+    try {
+      const response = await fetch("http://localhost:3000/api/nlp/process", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ transcript }),
+      });
+
+      const data = await response.json();
+      return {
+        success: response.ok,
+        data: response.ok ? data : undefined,
+        error: !response.ok ? data.error : undefined,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      };
+    }
+  },
+};
