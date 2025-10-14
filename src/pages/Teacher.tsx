@@ -11,7 +11,16 @@ import { useToast } from "@/components/ui/use-toast";
 import { anatomyAPI } from "@/lib/api/anatomy-api";
 import type { ViewerState } from "@/types/anatomy";
 import { sessionSync } from "@/lib/websocket/session-sync";
-import { Copy, Users, LogOut, Maximize, Settings } from "lucide-react";
+import {
+  Copy,
+  Users,
+  LogOut,
+  Maximize,
+  Settings,
+  MessageSquare,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Teacher() {
@@ -26,7 +35,8 @@ export default function Teacher() {
     executeCommand: (command: { action: string; target: string }) => void;
   }>();
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showControls, setShowControls] = useState(false);
+  const [showControls, setShowControls] = useState(false); // Collapsed by default on mobile
+  const [isCreating, setIsCreating] = useState(false);
   const viewerContainerRef = useRef<HTMLDivElement>(null);
 
   // Handle fullscreen
@@ -57,6 +67,7 @@ export default function Teacher() {
   };
 
   const createSession = async () => {
+    if (isCreating) return;
     if (!sessionTitle.trim()) {
       toast({
         title: "Title required",
@@ -66,16 +77,37 @@ export default function Teacher() {
       return;
     }
 
+    setIsCreating(true);
     const teacherId = `teacher-${Date.now()}`; // In production, use real auth
 
     try {
       const result = await anatomyAPI.createSession(sessionTitle, teacherId);
 
+      console.log("[Teacher] Session creation result:", result);
+
       if (!result.success || !result.data) {
-        throw new Error(result.error || "Failed to create session");
+        console.error("Session creation failed:", result.error);
+        toast({
+          title: "Error",
+          description: result.error || "Failed to create session",
+          variant: "destructive",
+        });
+        return;
       }
 
       const data = result.data;
+      console.log("[Teacher] Session data:", data);
+
+      if (!data.code) {
+        console.error("[Teacher] No code in session data:", data);
+        toast({
+          title: "Error",
+          description: "Session created but no code received",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setSessionCode(data.code);
       setSessionId(data.id);
       setIsSessionActive(true);
@@ -91,9 +123,12 @@ export default function Teacher() {
       console.error("Error creating session:", error);
       toast({
         title: "Error",
-        description: "Failed to create session",
+        description:
+          error instanceof Error ? error.message : "Failed to create session",
         variant: "destructive",
       });
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -175,9 +210,13 @@ export default function Teacher() {
                   onChange={(e) => setSessionTitle(e.target.value)}
                 />
               </div>
-              <Button onClick={createSession} className="w-full">
+              <Button
+                onClick={createSession}
+                className="w-full"
+                disabled={isCreating}
+              >
                 <Users className="mr-2 h-4 w-4" />
-                Start Session
+                {isCreating ? "Creating..." : "Start Session"}
               </Button>
             </CardContent>
           </Card>
@@ -191,69 +230,167 @@ export default function Teacher() {
                 </span>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-mono bg-primary text-primary-foreground px-3 py-1 rounded">
-                    {sessionCode}
+                    {sessionCode || "Loading..."}
                   </span>
-                  <Button size="sm" variant="outline" onClick={copyCode}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={copyCode}
+                    disabled={!sessionCode}
+                  >
                     <Copy className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2">
+                  {/* Mobile Controls Toggle */}
                   <Button
                     variant="outline"
                     size="sm"
+                    className="lg:hidden"
+                    onClick={() => setShowControls(!showControls)}
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span className="sr-only">Toggle Controls</span>
+                  </Button>
+
+                  {/* Desktop Controls Toggle */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="hidden lg:flex items-center"
                     onClick={() => setShowControls(!showControls)}
                   >
                     <Settings className="h-4 w-4 mr-2" />
                     Controls
                   </Button>
+
                   <SettingsPanel />
+
+                  {/* Fullscreen Toggle */}
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={toggleFullscreen}
+                    className="hidden sm:flex items-center"
                   >
                     <Maximize className="h-4 w-4 mr-2" />
                     {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                  </Button>
+
+                  {/* Mobile Fullscreen */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleFullscreen}
+                    className="sm:hidden"
+                  >
+                    <Maximize className="h-4 w-4" />
+                    <span className="sr-only">Toggle Fullscreen</span>
                   </Button>
                 </div>
               </div>
             </div>
 
-            {/* Main Content */}
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-4 min-h-0">
-              {/* Viewer */}
-              <div
-                ref={viewerContainerRef}
-                className="relative bg-black/5 rounded-xl overflow-hidden"
-              >
-                <UnityAnatomyViewer
-                  onReady={() => console.log("Unity viewer ready")}
-                />
-              </div>
-
-              {/* Side Panel */}
-              <div
-                className={cn(
-                  "flex flex-col min-h-0 transition-transform duration-300 lg:translate-x-0",
-                  showControls ? "translate-x-0" : "translate-x-full"
-                )}
-              >
-                {/* AI Interactive Panel */}
-                <div className="flex-1 min-h-0">
-                  <AIInteractivePanel onCommand={handleVoiceCommand} />
+            {/* Main Content - Desktop: Side-by-side, Mobile/Tablet: Scrollable Stacked */}
+            <div className="flex flex-col lg:flex-row h-full overflow-hidden gap-4">
+              {/* Left Side: Viewer and Mobile Controls */}
+              <div className="flex flex-col flex-1 min-w-0 overflow-y-auto lg:overflow-hidden">
+                {/* Mobile/Tablet Top Controls */}
+                <div className="lg:hidden bg-card rounded-xl shadow-lg mb-4 sticky top-0 z-10">
+                  <div className="p-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowControls(!showControls)}
+                      >
+                        {showControls ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                        <span className="sr-only">Toggle Controls</span>
+                      </Button>
+                      <SettingsPanel />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={toggleFullscreen}
+                      >
+                        <Maximize className="h-4 w-4" />
+                        <span className="sr-only">Toggle Fullscreen</span>
+                      </Button>
+                    </div>
+                    <Button
+                      onClick={endSession}
+                      variant="destructive"
+                      size="sm"
+                    >
+                      End Session
+                    </Button>
+                  </div>
+                  {/* Expandable Controls Panel */}
+                  <div
+                    className={cn(
+                      "overflow-hidden transition-all duration-300",
+                      showControls ? "max-h-[200px]" : "max-h-0"
+                    )}
+                  >
+                    <div className="p-4 overflow-y-auto">
+                      <div className="space-y-4">
+                        <h3 className="font-medium">Viewer Controls</h3>
+                        {/* Add your control components */}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* End Session Button */}
-                <div className="mt-4">
-                  <Button
-                    onClick={endSession}
-                    variant="destructive"
-                    className="w-full"
+                {/* Viewer */}
+                <div className="flex-1 min-h-[400px] lg:min-h-0 relative mb-4 lg:mb-0">
+                  <div
+                    ref={viewerContainerRef}
+                    className="absolute inset-0 bg-black/5 rounded-xl overflow-hidden"
                   >
-                    End Session
-                  </Button>
+                    <UnityAnatomyViewer
+                      onReady={() => console.log("Unity viewer ready")}
+                    />
+                  </div>
+                </div>
+
+                {/* Mobile/Tablet AI Panel - Bottom */}
+                <div className="lg:hidden bg-card rounded-xl shadow-lg flex flex-col overflow-hidden mb-4">
+                  <div className="min-h-[300px] max-h-[400px] overflow-y-auto">
+                    <AIInteractivePanel onCommand={handleVoiceCommand} />
+                  </div>
+                  <div className="p-4 border-t">
+                    <Button
+                      onClick={endSession}
+                      variant="destructive"
+                      className="w-full"
+                    >
+                      End Session
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Desktop AI Panel - Right Side */}
+              <div className="hidden lg:flex lg:w-[400px] xl:w-[450px]">
+                <div className="bg-card rounded-xl shadow-lg flex flex-col overflow-hidden w-full">
+                  <div className="flex-1 min-h-0">
+                    <AIInteractivePanel onCommand={handleVoiceCommand} />
+                  </div>
+                  <div className="p-4 border-t">
+                    <Button
+                      onClick={endSession}
+                      variant="destructive"
+                      className="w-full"
+                    >
+                      End Session
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>

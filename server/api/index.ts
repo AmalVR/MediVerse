@@ -25,14 +25,10 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:8080",
-      "http://localhost:8081",
-      "http://localhost:8082",
-      "http://localhost:3000",
-    ],
+    origin: true, // Allow all origins in development
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 app.use(express.json());
@@ -210,7 +206,10 @@ app.post("/api/sessions", async (req, res) => {
     const { title, teacherId } = req.body;
 
     if (!title || !teacherId) {
-      return res.status(400).json({ error: "Title and teacherId required" });
+      return res.status(400).json({
+        success: false,
+        error: "Title and teacherId required",
+      });
     }
 
     const code = generateSessionCode();
@@ -221,16 +220,23 @@ app.post("/api/sessions", async (req, res) => {
         title,
         teacherId,
         isActive: true,
-        cameraPosition: { x: 0, y: 5, z: 10 },
-        modelRotation: { x: 0, y: 0, z: 0 },
+        cameraPosition: JSON.stringify({ x: 0, y: 5, z: 10 }),
+        modelRotation: JSON.stringify({ x: 0, y: 0, z: 0 }),
         visibleSystems: ["SKELETAL"],
       },
     });
 
-    res.json(session);
+    res.json({
+      success: true,
+      data: session,
+    });
   } catch (error) {
     console.error("Error creating session:", error);
-    res.status(500).json({ error: "Failed to create session" });
+    res.status(500).json({
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to create session",
+    });
   }
 });
 
@@ -264,7 +270,10 @@ app.post("/api/sessions/join", async (req, res) => {
       update: {},
     });
 
-    res.json(session);
+    res.json({
+      success: true,
+      data: session,
+    });
   } catch (error) {
     console.error("Error joining session:", error);
     res.status(500).json({ error: "Failed to join session" });
@@ -280,14 +289,23 @@ app.patch("/api/sessions/:sessionId/state", async (req, res) => {
       where: { id: sessionId },
       data: {
         highlightedPart: viewerState.highlightedPart,
-        cameraPosition: viewerState.cameraPosition,
-        modelRotation: viewerState.modelRotation,
-        visibleSystems: viewerState.visibleSystems,
-        slicePosition: viewerState.slicePosition,
+        cameraPosition: viewerState.cameraPosition
+          ? JSON.stringify(viewerState.cameraPosition)
+          : undefined,
+        modelRotation: viewerState.modelRotation
+          ? JSON.stringify(viewerState.modelRotation)
+          : undefined,
+        visibleSystems: viewerState.visibleSystems || [],
+        slicePosition: viewerState.slicePosition
+          ? JSON.stringify(viewerState.slicePosition)
+          : undefined,
       },
     });
 
-    res.json(session);
+    res.json({
+      success: true,
+      data: session,
+    });
   } catch (error) {
     console.error("Error updating session:", error);
     res.status(500).json({ error: "Failed to update session" });

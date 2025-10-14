@@ -1,5 +1,6 @@
 import { io, Socket } from "socket.io-client";
 import { ViewerState } from "@/lib/api/anatomy-api";
+import { config } from "@/lib/config";
 
 class SessionSync {
   private socket: Socket | null = null;
@@ -10,7 +11,7 @@ class SessionSync {
       return;
     }
 
-    this.socket = io("http://localhost:3001", {
+    this.socket = io(config.wsUrl, {
       query: {
         sessionId,
         userId,

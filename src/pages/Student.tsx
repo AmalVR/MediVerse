@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UnityAnatomyViewer } from "@/components/UnityAnatomyViewer";
 import { useToast } from "@/components/ui/use-toast";
-import { anatomyAPI, type AnatomyAPI } from "@/lib/api/anatomy-api";
+import { anatomyAPI } from "@/lib/api/anatomy-api";
 import { sessionSync } from "@/lib/websocket/session-sync";
 import { LogOut } from "lucide-react";
 
@@ -14,6 +14,7 @@ export default function Student() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [sessionCode, setSessionCode] = useState("");
+  const [studentId] = useState(() => `student-${Date.now()}`); // Generate unique student ID
   const [isJoining, setIsJoining] = useState(false);
   const [isSessionActive, setIsSessionActive] = useState(false);
 
@@ -30,7 +31,8 @@ export default function Student() {
     setIsJoining(true);
 
     try {
-      const result = await anatomyAPI.joinSession(sessionCode);
+      // Pass both code and studentId
+      const result = await anatomyAPI.joinSession(sessionCode, studentId);
 
       if (!result.success || !result.data) {
         throw new Error(result.error || "Failed to join session");
@@ -40,7 +42,7 @@ export default function Student() {
       setIsSessionActive(true);
 
       // Connect to WebSocket for real-time sync
-      sessionSync.connect(data.id, `student-${Date.now()}`, "student");
+      sessionSync.connect(data.id, studentId, "student");
 
       toast({
         title: "Session joined",
@@ -57,6 +59,13 @@ export default function Student() {
       setIsJoining(false);
     }
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      sessionSync.disconnect();
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background p-3 sm:p-6">

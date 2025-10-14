@@ -18,10 +18,15 @@ export function UnityAnatomyViewer({ onReady }: UnityAnatomyViewerProps) {
   const buildPath = getUnityBuildPath(buildType);
 
   const { unityProvider, isLoaded, loadingProgression } = useUnityContext({
-    loaderUrl: `${buildPath}/Build/pc-build.loader.js`,
-    dataUrl: `${buildPath}/Build/pc-build.data.unityweb`,
-    frameworkUrl: `${buildPath}/Build/pc-build.framework.js.unityweb`,
-    codeUrl: `${buildPath}/Build/pc-build.wasm.unityweb`,
+    loaderUrl: `${buildPath}/Build/${buildType}-build.loader.js`,
+    dataUrl: `${buildPath}/Build/${buildType}-build.data.unityweb`,
+    frameworkUrl: `${buildPath}/Build/${buildType}-build.framework.js.unityweb`,
+    codeUrl: `${buildPath}/Build/${buildType}-build.wasm.unityweb`,
+    webglContextAttributes: {
+      preserveDrawingBuffer: true,
+      powerPreference: "high-performance",
+      antialias: true,
+    },
   });
 
   // Notify parent when Unity is ready
@@ -38,9 +43,15 @@ export function UnityAnatomyViewer({ onReady }: UnityAnatomyViewerProps) {
       {/* Loading overlay */}
       {!isLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
-          <Card className="p-6 max-w-md">
+          <Card className="p-6 max-w-md mx-4">
             <div className="flex flex-col items-center space-y-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <div className="relative">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div className="absolute -top-1 -right-1 h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+                </div>
+              </div>
               <div className="text-center">
                 <div className="font-semibold mb-1">
                   Loading Z-Anatomy Viewer
@@ -51,12 +62,19 @@ export function UnityAnatomyViewer({ onReady }: UnityAnatomyViewerProps) {
                 <div className="text-xs text-muted-foreground">
                   Using {buildType === "pc" ? "Desktop" : "Mobile"} Build
                 </div>
+                {deviceInfo.platform === "mobile" && (
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Optimized for mobile devices
+                  </div>
+                )}
               </div>
-              <div className="w-full bg-muted rounded-full h-2">
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                 <div
-                  className="bg-primary h-2 rounded-full transition-all duration-300"
+                  className="bg-primary h-2 rounded-full transition-all duration-300 relative"
                   style={{ width: `${loadingPercentage}%` }}
-                />
+                >
+                  <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]"></div>
+                </div>
               </div>
             </div>
           </Card>

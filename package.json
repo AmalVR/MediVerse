@@ -27,7 +27,14 @@
     "docker:dev": "docker-compose -f docker-compose.dev.yml up -d",
     "docker:prod": "docker-compose up -d",
     "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f"
+    "docker:logs": "docker-compose logs -f",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:e2e": "playwright test tests/e2e",
+    "test:mobile": "playwright test tests/e2e/mobile.spec.ts",
+    "test:report": "playwright show-report"
   },
   "dependencies": {
     "@google-cloud/dialogflow": "^6.9.0",
@@ -94,6 +101,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@playwright/test": "^1.56.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^22.16.5",
     "@types/react": "^18.3.23",

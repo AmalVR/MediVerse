@@ -218,7 +218,7 @@ export function AIInteractivePanel({ onCommand }: AIInteractivePanelProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-background to-muted/20 rounded-xl border border-border/50 shadow-2xl backdrop-blur-sm">
+    <div className="flex flex-col h-[300px] lg:h-full bg-gradient-to-br from-background to-muted/20 rounded-xl border border-border/50 shadow-2xl backdrop-blur-sm">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-background/50 backdrop-blur-sm rounded-t-xl">
         <div className="flex items-center gap-2">
