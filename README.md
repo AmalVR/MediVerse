@@ -5,11 +5,13 @@
 ## Features
 
 - 🎯 **3D Anatomy Viewer** - Unity WebGL-based Z-Anatomy models
-- 🎤 **Voice Commands** - Google Cloud Speech-to-Text + Dialogflow NLP
+- 🎤 **Voice Commands** - AI-powered natural language anatomy commands
 - 👥 **Real-time Collaboration** - Teacher controls sync to students via WebSocket
-- 📝 **Student Notes** - Collaborative note-taking during sessions
-- 🔐 **Type-safe Backend** - ZenStack + Prisma with PostgreSQL
-- 🌐 **Multi-platform** - Responsive design, auto-detects desktop/mobile
+- 🎮 **Command System** - Type-safe Unity command execution following SOLID principles
+- 📝 **AI Interactive Mode** - ChatGPT-style interface for learning and exploration
+- 🔐 **Type-safe Backend** - Prisma with PostgreSQL
+- 🌐 **Multi-platform** - Responsive design, auto-detects desktop/mobile (PC/Mobile Unity builds)
+- 📱 **PWA Support** - Install as app, works offline with cached models
 
 ## Quick Start
 
@@ -68,11 +70,24 @@ MediVerse/
 
 ## Documentation
 
+### Getting Started
+
 - **[Quick Start](docs/QUICK_START.md)** - Get running in 5 minutes
-- **[Architecture](docs/ARCHITECTURE.md)** - System design & patterns
+- **[Database Setup](docs/SETUP_DATABASE.md)** - Schema & migrations
 - **[Unity Setup](docs/SETUP_UNITY.md)** - Build 3D viewer
+
+### Core Features ⭐
+
+- **[Unity Commands](docs/UNITY_COMMANDS.md)** - Complete command system guide
+- **[Unity Implementation](docs/UNITY_IMPLEMENTATION_SUMMARY.md)** - Architecture & SOLID principles
+- **[API Standards](docs/API_STANDARDS.md)** - Consistent response formats
+- **[PWA Setup](docs/PWA_SETUP.md)** - Progressive Web App features
+
+### Development
+
+- **[Architecture](docs/ARCHITECTURE.md)** - System design & patterns
+- **[Testing Guide](docs/TESTING.md)** - E2E tests with Playwright
 - **[GCP Setup](docs/SETUP_GCP.md)** - Voice & NLP configuration
-- **[Database](docs/SETUP_DATABASE.md)** - Schema & migrations
 - **[Roadmap](docs/ROADMAP.md)** - Future features
 
 ## Tech Stack
@@ -80,18 +95,25 @@ MediVerse/
 **Frontend:**
 
 - React 18 + TypeScript
-- React Three Fiber (3D rendering)
-- Unity WebGL (Z-Anatomy viewer)
+- Unity WebGL (Z-Anatomy viewer) via react-unity-webgl
 - TailwindCSS + shadcn/ui
-- React Query + Socket.io client
+- Socket.io client (real-time sync)
+- Progressive Web App (PWA)
 
 **Backend:**
 
 - Express.js + TypeScript
-- ZenStack + Prisma ORM
+- Prisma ORM
 - PostgreSQL
-- Socket.io (WebSocket)
-- Google Cloud (Speech, Dialogflow, TTS)
+- Socket.io (WebSocket server)
+- RESTful API with consistent response format
+
+**Architecture:**
+
+- SOLID Principles
+- Command Pattern for Unity integration
+- Dependency Injection
+- Type-safe interfaces throughout
 
 ## Scripts
 

@@ -10,6 +10,7 @@ import { AIInteractivePanel } from "@/components/AIInteractivePanel";
 import { useToast } from "@/components/ui/use-toast";
 import { anatomyAPI } from "@/lib/api/anatomy-api";
 import type { ViewerState } from "@/types/anatomy";
+import type { IUnityViewerHandle } from "@/types/unity";
 import { sessionSync } from "@/lib/websocket/session-sync";
 import {
   Copy,
@@ -30,10 +31,8 @@ export default function Teacher() {
   const [sessionId, setSessionId] = useState("");
   const [sessionTitle, setSessionTitle] = useState("");
   const [isSessionActive, setIsSessionActive] = useState(false);
-  // Unity handles part highlighting internally
-  const unityRef = useRef<{
-    executeCommand: (command: { action: string; target: string }) => void;
-  }>();
+  // Unity viewer reference - follows Interface Segregation Principle
+  const unityRef = useRef<IUnityViewerHandle>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(false); // Collapsed by default on mobile
   const [isCreating, setIsCreating] = useState(false);
@@ -144,10 +143,37 @@ export default function Teacher() {
     action: string;
     target: string;
   }) => {
-    console.log("Voice command:", command);
+    console.log("[Teacher] Voice command received:", command);
 
-    // Forward command to Unity
-    unityRef.current?.executeCommand(command);
+    // Check if Unity is ready
+    if (!unityRef.current) {
+      toast({
+        title: "Unity not ready",
+        description: "The 3D viewer is still loading. Please wait.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Execute command on Unity (command already matches UnityCommand interface)
+    const result = unityRef.current.executeCommand(
+      command as { action: string; target: string }
+    );
+
+    if (!result.success) {
+      toast({
+        title: "Command failed",
+        description: result.error || "Failed to execute command",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Show success feedback
+    toast({
+      title: "Command executed",
+      description: `${command.action} ${command.target}`,
+    });
 
     // Update session via WebSocket and API for students to see
     if (sessionId) {
@@ -159,7 +185,12 @@ export default function Teacher() {
         // Also persist to database
         await anatomyAPI.updateSessionState(sessionId, state);
       } catch (error) {
-        console.error("Error updating session:", error);
+        console.error("[Teacher] Error updating session:", error);
+        toast({
+          title: "Sync warning",
+          description: "Command executed but failed to sync with students",
+          variant: "destructive",
+        });
       }
     }
   };
@@ -348,13 +379,21 @@ export default function Teacher() {
                 </div>
 
                 {/* Viewer */}
-                <div className="flex-1 min-h-[400px] lg:min-h-0 relative mb-4 lg:mb-0">
+                <div className="flex-1 min-h-[400px] relative mb-4 lg:mb-0">
                   <div
                     ref={viewerContainerRef}
                     className="absolute inset-0 bg-black/5 rounded-xl overflow-hidden"
                   >
                     <UnityAnatomyViewer
-                      onReady={() => console.log("Unity viewer ready")}
+                      ref={unityRef}
+                      onReady={() => {
+                        console.log("[Teacher] Unity viewer ready");
+                        toast({
+                          title: "3D Viewer Ready",
+                          description:
+                            "You can now use voice commands and controls",
+                        });
+                      }}
                     />
                   </div>
                 </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { UnityAnatomyViewer } from "@/components/UnityAnatomyViewer";
 import { useToast } from "@/components/ui/use-toast";
 import { anatomyAPI } from "@/lib/api/anatomy-api";
+import type { IUnityViewerHandle } from "@/types/unity";
+import type { ViewerState } from "@/types/anatomy";
 import { sessionSync } from "@/lib/websocket/session-sync";
 import { LogOut } from "lucide-react";
 
@@ -17,6 +19,7 @@ export default function Student() {
   const [studentId] = useState(() => `student-${Date.now()}`); // Generate unique student ID
   const [isJoining, setIsJoining] = useState(false);
   const [isSessionActive, setIsSessionActive] = useState(false);
+  const unityRef = useRef<IUnityViewerHandle>(null);
 
   const joinSession = async () => {
     if (!sessionCode.trim()) {
@@ -60,8 +63,31 @@ export default function Student() {
     }
   };
 
-  // Cleanup on unmount
+  // Listen for teacher's commands via WebSocket
   useEffect(() => {
+    const handleViewerStateUpdate = (state: ViewerState) => {
+      console.log("[Student] Received viewer state update:", state);
+
+      // Execute command if present
+      if (state.command && unityRef.current) {
+        const result = unityRef.current.executeCommand(
+          state.command as { action: string; target: string }
+        );
+
+        if (result.success) {
+          console.log(
+            "[Student] Command executed successfully:",
+            state.command
+          );
+        } else {
+          console.error("[Student] Command execution failed:", result.error);
+        }
+      }
+    };
+
+    // Subscribe to viewer state updates
+    sessionSync.onViewerStateUpdate(handleViewerStateUpdate);
+
     return () => {
       sessionSync.disconnect();
     };
@@ -110,7 +136,15 @@ export default function Student() {
             <Card className="h-full">
               <CardContent className="h-full p-0">
                 <UnityAnatomyViewer
-                  onReady={() => console.log("Unity viewer ready")}
+                  ref={unityRef}
+                  onReady={() => {
+                    console.log("[Student] Unity viewer ready");
+                    toast({
+                      title: "3D Viewer Ready",
+                      description:
+                        "Connected and ready to follow teacher's actions",
+                    });
+                  }}
                 />
               </CardContent>
             </Card>

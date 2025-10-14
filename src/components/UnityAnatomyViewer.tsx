@@ -1,4 +1,10 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+  useImperativeHandle,
+  forwardRef,
+  useRef,
+} from "react";
 import { Unity, useUnityContext } from "react-unity-webgl";
 import {
   detectUnityBuild,
@@ -7,27 +13,72 @@ import {
 } from "@/lib/platform-detect";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { UnityCommandExecutor } from "@/lib/unity/UnityCommandExecutor";
+import type {
+  IUnityViewerHandle,
+  UnityCommand,
+  UnityCommandResult,
+} from "@/types/unity";
 
 interface UnityAnatomyViewerProps {
   onReady?: () => void;
 }
 
-export function UnityAnatomyViewer({ onReady }: UnityAnatomyViewerProps) {
+/**
+ * Unity Anatomy Viewer Component
+ *
+ * Following SOLID principles:
+ * - Single Responsibility: Only responsible for rendering Unity and exposing command interface
+ * - Dependency Inversion: Uses IUnityViewerHandle interface
+ * - Interface Segregation: Exposes minimal API via ref
+ */
+export const UnityAnatomyViewer = forwardRef<
+  IUnityViewerHandle,
+  UnityAnatomyViewerProps
+>(({ onReady }, ref) => {
   const [buildType] = useState(() => detectUnityBuild());
   const [deviceInfo] = useState(() => getDeviceInfo());
   const buildPath = getUnityBuildPath(buildType);
 
-  const { unityProvider, isLoaded, loadingProgression } = useUnityContext({
-    loaderUrl: `${buildPath}/Build/${buildType}-build.loader.js`,
-    dataUrl: `${buildPath}/Build/${buildType}-build.data.unityweb`,
-    frameworkUrl: `${buildPath}/Build/${buildType}-build.framework.js.unityweb`,
-    codeUrl: `${buildPath}/Build/${buildType}-build.wasm.unityweb`,
-    webglContextAttributes: {
-      preserveDrawingBuffer: true,
-      powerPreference: "high-performance",
-      antialias: true,
-    },
-  });
+  const { unityProvider, sendMessage, isLoaded, loadingProgression } =
+    useUnityContext({
+      loaderUrl: `${buildPath}/Build/${buildType}-build.loader.js`,
+      dataUrl: `${buildPath}/Build/${buildType}-build.data.unityweb`,
+      frameworkUrl: `${buildPath}/Build/${buildType}-build.framework.js.unityweb`,
+      codeUrl: `${buildPath}/Build/${buildType}-build.wasm.unityweb`,
+      webglContextAttributes: {
+        preserveDrawingBuffer: true,
+        powerPreference: "high-performance",
+        antialias: true,
+      },
+    });
+
+  // Create command executor (Dependency Injection)
+  const executorRef = useRef<UnityCommandExecutor>(
+    new UnityCommandExecutor(sendMessage, isLoaded)
+  );
+
+  // Update executor when Unity loads
+  useEffect(() => {
+    executorRef.current.updateLoadedState(isLoaded);
+  }, [isLoaded]);
+
+  // Expose command execution interface to parent component
+  useImperativeHandle(
+    ref,
+    (): IUnityViewerHandle => ({
+      executeCommand: (command: UnityCommand): UnityCommandResult => {
+        return executorRef.current.executeCommand(command);
+      },
+      isLoaded: (): boolean => {
+        return isLoaded;
+      },
+      getLoadingProgress: (): number => {
+        return loadingProgression;
+      },
+    }),
+    [isLoaded, loadingProgression]
+  );
 
   // Notify parent when Unity is ready
   useEffect(() => {
@@ -102,4 +153,6 @@ export function UnityAnatomyViewer({ onReady }: UnityAnatomyViewerProps) {
       />
     </div>
   );
-}
+});
+
+UnityAnatomyViewer.displayName = "UnityAnatomyViewer";
