@@ -59,5 +59,11 @@ export function getDeviceInfo() {
 export function getUnityBuildPath(buildType?: UnityBuildType): string {
   const build = buildType || detectUnityBuild();
 
-  return build === "pc" ? "/unity/pc-build" : "/unity/mobile-build";
+  // Check if the expected build exists
+  const expectedPath =
+    build === "pc" ? "/unity/pc-build" : "/unity/mobile-build";
+
+  // For now, use the available build in /unity/Build/
+  // TODO: Add proper mobile build when available
+  return "/unity";
 }

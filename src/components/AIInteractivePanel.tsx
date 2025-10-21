@@ -54,6 +54,113 @@ interface AIInteractivePanelProps {
   onCommand: (command: VoiceCommand) => void;
 }
 
+// Simple local NLP parser - converts natural language to Unity commands
+// TODO: Replace with OpenAI/Claude API for production
+function parseLocalCommand(text: string): VoiceCommand {
+  const lowerText = text.toLowerCase().trim();
+
+  // Show/Display commands
+  if (lowerText.match(/show|display|enable/)) {
+    const systems = [
+      "skeletal",
+      "muscular",
+      "nervous",
+      "circulatory",
+      "digestive",
+      "respiratory",
+    ];
+    const parts = [
+      "skull",
+      "femur",
+      "humerus",
+      "spine",
+      "ribs",
+      "heart",
+      "brain",
+    ];
+
+    for (const system of systems) {
+      if (lowerText.includes(system)) {
+        return { action: "show", target: system, success: true };
+      }
+    }
+    for (const part of parts) {
+      if (lowerText.includes(part)) {
+        return { action: "show", target: part, success: true };
+      }
+    }
+  }
+
+  // Hide commands
+  if (lowerText.match(/hide|remove|disable/)) {
+    const systems = [
+      "skeletal",
+      "muscular",
+      "nervous",
+      "circulatory",
+      "digestive",
+      "respiratory",
+    ];
+    for (const system of systems) {
+      if (lowerText.includes(system)) {
+        return { action: "hide", target: system, success: true };
+      }
+    }
+  }
+
+  // Highlight commands
+  if (lowerText.match(/highlight|focus|emphasize/)) {
+    const parts = [
+      "skull",
+      "femur",
+      "humerus",
+      "spine",
+      "ribs",
+      "heart",
+      "brain",
+    ];
+    for (const part of parts) {
+      if (lowerText.includes(part)) {
+        return { action: "highlight", target: part, success: true };
+      }
+    }
+  }
+
+  // Rotate commands
+  if (lowerText.match(/rotate|turn|spin/)) {
+    if (lowerText.match(/left/))
+      return { action: "rotate", target: "left", success: true };
+    if (lowerText.match(/right/))
+      return { action: "rotate", target: "right", success: true };
+    if (lowerText.match(/up/))
+      return { action: "rotate", target: "up", success: true };
+    if (lowerText.match(/down/))
+      return { action: "rotate", target: "down", success: true };
+  }
+
+  // Zoom commands
+  if (lowerText.match(/zoom/)) {
+    if (lowerText.match(/in|closer/))
+      return { action: "zoom", target: "in", success: true };
+    if (lowerText.match(/out|away/))
+      return { action: "zoom", target: "out", success: true };
+  }
+
+  // Reset command
+  if (lowerText.match(/reset|default|clear/)) {
+    return { action: "reset", target: "", success: true };
+  }
+
+  // If no command matched, return error
+  return {
+    action: "",
+    target: "",
+    success: false,
+    errorMsg:
+      "I didn't understand that command. Try: 'show skeletal system', 'highlight femur', 'rotate left', or 'zoom in'.",
+  };
+}
+
 export function AIInteractivePanel({ onCommand }: AIInteractivePanelProps) {
   const [isListening, setIsListening] = useState(false);
   const [inputText, setInputText] = useState("");
@@ -90,14 +197,8 @@ export function AIInteractivePanel({ onCommand }: AIInteractivePanelProps) {
     setIsProcessing(true);
 
     try {
-      // Process via AI/NLP API
-      const result = await anatomyAPI.processVoiceCommand(text);
-
-      if (!result.success || !result.data) {
-        throw new Error(result.error || "Failed to process command");
-      }
-
-      const command = result.data;
+      // Simple local NLP parser (TODO: Replace with OpenAI/Claude for production)
+      const command = parseLocalCommand(text);
 
       // If it's a viewer command, execute it
       if (command.success && command.action) {
@@ -218,7 +319,7 @@ export function AIInteractivePanel({ onCommand }: AIInteractivePanelProps) {
   };
 
   return (
-    <div className="flex flex-col h-[300px] lg:h-full bg-gradient-to-br from-background to-muted/20 rounded-xl border border-border/50 shadow-2xl backdrop-blur-sm">
+    <div className="flex flex-col h-full bg-gradient-to-br from-background to-muted/20 border-0 shadow-none backdrop-blur-sm">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-background/50 backdrop-blur-sm rounded-t-xl">
         <div className="flex items-center gap-2">

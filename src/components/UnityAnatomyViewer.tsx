@@ -14,6 +14,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { UnityCommandExecutor } from "@/lib/unity/UnityCommandExecutor";
+import { UnityPlaceholder } from "@/components/UnityPlaceholder";
 import type {
   IUnityViewerHandle,
   UnityCommand,
@@ -38,14 +39,16 @@ export const UnityAnatomyViewer = forwardRef<
 >(({ onReady }, ref) => {
   const [buildType] = useState(() => detectUnityBuild());
   const [deviceInfo] = useState(() => getDeviceInfo());
+  const [unityError, setUnityError] = useState<string | null>(null);
+  const [skipUnity, setSkipUnity] = useState(false);
   const buildPath = getUnityBuildPath(buildType);
 
   const { unityProvider, sendMessage, isLoaded, loadingProgression } =
     useUnityContext({
-      loaderUrl: `${buildPath}/Build/${buildType}-build.loader.js`,
-      dataUrl: `${buildPath}/Build/${buildType}-build.data.unityweb`,
-      frameworkUrl: `${buildPath}/Build/${buildType}-build.framework.js.unityweb`,
-      codeUrl: `${buildPath}/Build/${buildType}-build.wasm.unityweb`,
+      loaderUrl: `${buildPath}/Build/pc-build.loader.js`,
+      dataUrl: `${buildPath}/Build/pc-build.data.unityweb`,
+      frameworkUrl: `${buildPath}/Build/pc-build.framework.js.unityweb`,
+      codeUrl: `${buildPath}/Build/pc-build.wasm.unityweb`,
       webglContextAttributes: {
         preserveDrawingBuffer: true,
         powerPreference: "high-performance",
@@ -87,7 +90,94 @@ export const UnityAnatomyViewer = forwardRef<
     }
   }, [isLoaded, onReady]);
 
+  // Check if Unity build files exist
+  useEffect(() => {
+    const checkUnityFiles = async () => {
+      try {
+        // Check if required Unity files exist
+        const requiredFiles = [
+          `${buildPath}/Build/pc-build.framework.js.unityweb`,
+          `${buildPath}/Build/pc-build.wasm.unityweb`,
+        ];
+
+        const missingFiles = [];
+        for (const file of requiredFiles) {
+          try {
+            const response = await fetch(file, { method: "HEAD" });
+            if (!response.ok) {
+              missingFiles.push(file);
+            }
+          } catch {
+            missingFiles.push(file);
+          }
+        }
+
+        if (missingFiles.length > 0) {
+          setSkipUnity(true);
+          setUnityError(
+            `Unity WebGL build is incomplete. Missing files: ${missingFiles
+              .map((f) => f.split("/").pop())
+              .join(", ")}`
+          );
+        }
+      } catch (error) {
+        console.warn("Could not check Unity files:", error);
+      }
+    };
+
+    checkUnityFiles();
+  }, [buildPath]);
+
+  // Handle Unity loading errors
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      if (
+        event.message.includes("createUnityInstance") ||
+        event.message.includes("Unity") ||
+        event.message.includes("WebGL") ||
+        event.message.includes("unityFramework") ||
+        event.message.includes("corrupt") ||
+        event.message.includes("compression")
+      ) {
+        setUnityError(
+          "Unity WebGL build files are incomplete or corrupted. The 3D anatomy viewer is currently unavailable."
+        );
+      }
+    };
+
+    window.addEventListener("error", handleError);
+    return () => window.removeEventListener("error", handleError);
+  }, []);
+
   const loadingPercentage = Math.round(loadingProgression * 100);
+
+  // Skip Unity loading if files are missing
+  if (skipUnity) {
+    return (
+      <UnityPlaceholder
+        errorMessage={unityError}
+        onRetry={() => {
+          setUnityError(null);
+          setSkipUnity(false);
+          window.location.reload();
+        }}
+      />
+    );
+  }
+
+  // Show error state if Unity fails to load
+  if (unityError) {
+    return (
+      <UnityPlaceholder
+        errorMessage={unityError}
+        onRetry={() => {
+          setUnityError(null);
+          // Force re-render by updating a state
+          window.location.reload();
+        }}
+      />
+    );
+  }
 
   return (
     <div className="relative w-full h-full">
@@ -132,12 +222,16 @@ export const UnityAnatomyViewer = forwardRef<
         </div>
       )}
 
-      {/* Device info (development only) */}
+      {/* Device info & command status (development only) */}
       {process.env.NODE_ENV === "development" && (
-        <div className="absolute top-2 left-2 bg-black/80 text-white text-xs p-2 rounded z-20">
+        <div className="absolute top-2 left-2 bg-black/80 text-white text-xs p-2 rounded z-20 max-w-[200px]">
           <div>Platform: {deviceInfo.platform}</div>
           <div>Build: {deviceInfo.unityBuild}</div>
           <div>Touch: {deviceInfo.hasTouch ? "Yes" : "No"}</div>
+          <div className="mt-2 text-yellow-400 text-[10px]">
+            ⚠️ Unity GameManager not configured. Commands are sent but not
+            processed.
+          </div>
         </div>
       )}
 

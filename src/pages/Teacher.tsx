@@ -12,17 +12,7 @@ import { anatomyAPI } from "@/lib/api/anatomy-api";
 import type { ViewerState } from "@/types/anatomy";
 import type { IUnityViewerHandle } from "@/types/unity";
 import { sessionSync } from "@/lib/websocket/session-sync";
-import {
-  Copy,
-  Users,
-  LogOut,
-  Maximize,
-  Settings,
-  MessageSquare,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Copy, Users, LogOut, Maximize, Settings } from "lucide-react";
 
 export default function Teacher() {
   const navigate = useNavigate();
@@ -31,10 +21,8 @@ export default function Teacher() {
   const [sessionId, setSessionId] = useState("");
   const [sessionTitle, setSessionTitle] = useState("");
   const [isSessionActive, setIsSessionActive] = useState(false);
-  // Unity viewer reference - follows Interface Segregation Principle
   const unityRef = useRef<IUnityViewerHandle>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showControls, setShowControls] = useState(false); // Collapsed by default on mobile
   const [isCreating, setIsCreating] = useState(false);
   const viewerContainerRef = useRef<HTMLDivElement>(null);
 
@@ -61,10 +49,6 @@ export default function Teacher() {
     };
   }, []);
 
-  const generateCode = () => {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
-  };
-
   const createSession = async () => {
     if (isCreating) return;
     if (!sessionTitle.trim()) {
@@ -77,7 +61,7 @@ export default function Teacher() {
     }
 
     setIsCreating(true);
-    const teacherId = `teacher-${Date.now()}`; // In production, use real auth
+    const teacherId = `teacher-${Date.now()}`;
 
     try {
       const result = await anatomyAPI.createSession(sessionTitle, teacherId);
@@ -91,27 +75,30 @@ export default function Teacher() {
           description: result.error || "Failed to create session",
           variant: "destructive",
         });
+        setIsCreating(false);
         return;
       }
 
       const data = result.data;
       console.log("[Teacher] Session data:", data);
 
-      if (!data.code) {
-        console.error("[Teacher] No code in session data:", data);
+      if (!data.code || !data.id) {
+        console.error("[Teacher] Invalid session data:", data);
         toast({
           title: "Error",
-          description: "Session created but no code received",
+          description: "Session created but missing code or ID",
           variant: "destructive",
         });
+        setIsCreating(false);
         return;
       }
 
+      // Set session data
       setSessionCode(data.code);
       setSessionId(data.id);
       setIsSessionActive(true);
 
-      // Connect to WebSocket for real-time sync
+      // Connect to WebSocket
       sessionSync.connect(data.id, teacherId, "teacher");
 
       toast({
@@ -132,11 +119,13 @@ export default function Teacher() {
   };
 
   const copyCode = () => {
-    navigator.clipboard.writeText(sessionCode);
-    toast({
-      title: "Copied",
-      description: "Session code copied to clipboard",
-    });
+    if (sessionCode) {
+      navigator.clipboard.writeText(sessionCode);
+      toast({
+        title: "Copied",
+        description: "Session code copied to clipboard",
+      });
+    }
   };
 
   const handleVoiceCommand = async (command: {
@@ -145,7 +134,6 @@ export default function Teacher() {
   }) => {
     console.log("[Teacher] Voice command received:", command);
 
-    // Check if Unity is ready
     if (!unityRef.current) {
       toast({
         title: "Unity not ready",
@@ -155,7 +143,6 @@ export default function Teacher() {
       return;
     }
 
-    // Execute command on Unity (command already matches UnityCommand interface)
     const result = unityRef.current.executeCommand(
       command as { action: string; target: string }
     );
@@ -169,28 +156,19 @@ export default function Teacher() {
       return;
     }
 
-    // Show success feedback
     toast({
       title: "Command executed",
       description: `${command.action} ${command.target}`,
     });
 
-    // Update session via WebSocket and API for students to see
+    // Sync with students
     if (sessionId) {
       try {
-        // Broadcast via WebSocket for real-time updates
         const state: ViewerState = { command };
         sessionSync.updateViewerState(sessionId, state);
-
-        // Also persist to database
         await anatomyAPI.updateSessionState(sessionId, state);
       } catch (error) {
         console.error("[Teacher] Error updating session:", error);
-        toast({
-          title: "Sync warning",
-          description: "Command executed but failed to sync with students",
-          variant: "destructive",
-        });
       }
     }
   };
@@ -214,15 +192,16 @@ export default function Teacher() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-3 sm:p-6">
-      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
+    <div className="min-h-screen bg-background p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
             Teacher Dashboard
           </h1>
           <Button variant="outline" onClick={() => navigate("/")} size="sm">
             <LogOut className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Exit</span>
+            Exit
           </Button>
         </div>
 
@@ -252,9 +231,9 @@ export default function Teacher() {
             </CardContent>
           </Card>
         ) : (
-          <div className="flex flex-col h-[calc(100vh-8rem)]">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col h-[calc(100vh-10rem)]">
+            {/* Session Header */}
+            <div className="flex items-center justify-between mb-4 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <span className="text-lg font-semibold">
                   Session: {sessionTitle}
@@ -274,154 +253,43 @@ export default function Teacher() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2">
-                  {/* Mobile Controls Toggle */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="lg:hidden"
-                    onClick={() => setShowControls(!showControls)}
-                  >
-                    <Settings className="h-4 w-4" />
-                    <span className="sr-only">Toggle Controls</span>
-                  </Button>
-
-                  {/* Desktop Controls Toggle */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="hidden lg:flex items-center"
-                    onClick={() => setShowControls(!showControls)}
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Controls
-                  </Button>
-
-                  <SettingsPanel />
-
-                  {/* Fullscreen Toggle */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={toggleFullscreen}
-                    className="hidden sm:flex items-center"
-                  >
-                    <Maximize className="h-4 w-4 mr-2" />
-                    {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                  </Button>
-
-                  {/* Mobile Fullscreen */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={toggleFullscreen}
-                    className="sm:hidden"
-                  >
-                    <Maximize className="h-4 w-4" />
-                    <span className="sr-only">Toggle Fullscreen</span>
-                  </Button>
-                </div>
+                <SettingsPanel />
+                <Button variant="outline" size="sm" onClick={toggleFullscreen}>
+                  <Maximize className="h-4 w-4 mr-2" />
+                  {isFullscreen ? "Exit" : "Fullscreen"}
+                </Button>
               </div>
             </div>
 
-            {/* Main Content - Desktop: Side-by-side, Mobile/Tablet: Scrollable Stacked */}
-            <div className="flex flex-col lg:flex-row h-full overflow-hidden gap-4">
-              {/* Left Side: Viewer and Mobile Controls */}
-              <div className="flex flex-col flex-1 min-w-0 overflow-y-auto lg:overflow-hidden">
-                {/* Mobile/Tablet Top Controls */}
-                <div className="lg:hidden bg-card rounded-xl shadow-lg mb-4 sticky top-0 z-10">
-                  <div className="p-2 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowControls(!showControls)}
-                      >
-                        {showControls ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                        <span className="sr-only">Toggle Controls</span>
-                      </Button>
-                      <SettingsPanel />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={toggleFullscreen}
-                      >
-                        <Maximize className="h-4 w-4" />
-                        <span className="sr-only">Toggle Fullscreen</span>
-                      </Button>
-                    </div>
-                    <Button
-                      onClick={endSession}
-                      variant="destructive"
-                      size="sm"
-                    >
-                      End Session
-                    </Button>
-                  </div>
-                  {/* Expandable Controls Panel */}
-                  <div
-                    className={cn(
-                      "overflow-hidden transition-all duration-300",
-                      showControls ? "max-h-[200px]" : "max-h-0"
-                    )}
-                  >
-                    <div className="p-4 overflow-y-auto">
-                      <div className="space-y-4">
-                        <h3 className="font-medium">Viewer Controls</h3>
-                        {/* Add your control components */}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Viewer */}
-                <div className="flex-1 min-h-[400px] relative mb-4 lg:mb-0">
-                  <div
-                    ref={viewerContainerRef}
-                    className="absolute inset-0 bg-black/5 rounded-xl overflow-hidden"
-                  >
-                    <UnityAnatomyViewer
-                      ref={unityRef}
-                      onReady={() => {
-                        console.log("[Teacher] Unity viewer ready");
-                        toast({
-                          title: "3D Viewer Ready",
-                          description:
-                            "You can now use voice commands and controls",
-                        });
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* Mobile/Tablet AI Panel - Bottom */}
-                <div className="lg:hidden bg-card rounded-xl shadow-lg flex flex-col overflow-hidden mb-4">
-                  <div className="min-h-[300px] max-h-[400px] overflow-y-auto">
-                    <AIInteractivePanel onCommand={handleVoiceCommand} />
-                  </div>
-                  <div className="p-4 border-t">
-                    <Button
-                      onClick={endSession}
-                      variant="destructive"
-                      className="w-full"
-                    >
-                      End Session
-                    </Button>
-                  </div>
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col lg:flex-row gap-4 min-h-0">
+              {/* Unity Viewer */}
+              <div className="flex-1 lg:flex-[2] min-h-[400px]">
+                <div
+                  ref={viewerContainerRef}
+                  className="w-full h-full bg-black/5 rounded-xl overflow-hidden"
+                >
+                  <UnityAnatomyViewer
+                    ref={unityRef}
+                    onReady={() => {
+                      console.log("[Teacher] Unity viewer ready");
+                      toast({
+                        title: "3D Viewer Ready",
+                        description:
+                          "You can now use voice commands and controls",
+                      });
+                    }}
+                  />
                 </div>
               </div>
 
-              {/* Desktop AI Panel - Right Side */}
-              <div className="hidden lg:flex lg:w-[400px] xl:w-[450px]">
-                <div className="bg-card rounded-xl shadow-lg flex flex-col overflow-hidden w-full">
-                  <div className="flex-1 min-h-0">
+              {/* AI Interactive Panel */}
+              <div className="lg:flex-1 lg:max-w-[450px] min-h-[400px] lg:min-h-0">
+                <Card className="h-full flex flex-col">
+                  <div className="flex-1 min-h-0 overflow-hidden">
                     <AIInteractivePanel onCommand={handleVoiceCommand} />
                   </div>
-                  <div className="p-4 border-t">
+                  <div className="p-4 border-t flex-shrink-0">
                     <Button
                       onClick={endSession}
                       variant="destructive"
@@ -430,7 +298,7 @@ export default function Teacher() {
                       End Session
                     </Button>
                   </div>
-                </div>
+                </Card>
               </div>
             </div>
           </div>

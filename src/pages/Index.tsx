@@ -1,10 +1,18 @@
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { GraduationCap, Users, Brain, Video } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { GraduationCap, Users, Brain, Video, Book } from "lucide-react";
 
 export default function Index() {
   const navigate = useNavigate();
+
+  // Force refresh to clear cache
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-accent/10">
@@ -18,80 +26,30 @@ export default function Index() {
             </h1>
           </div>
           <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
-            Interactive 3D anatomy learning with real-time collaboration and voice-driven navigation
+            Interactive 3D anatomy learning with real-time collaboration and
+            voice-driven navigation
           </p>
         </div>
 
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12 sm:mb-16 px-2">
-          <Card className="border-primary/20 hover:border-primary transition-colors">
-            <CardHeader>
-              <Video className="h-8 w-8 text-primary mb-2" />
-              <CardTitle className="text-lg">Live Sessions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Real-time teaching with synchronized 3D models
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-primary/20 hover:border-primary transition-colors">
-            <CardHeader>
-              <Brain className="h-8 w-8 text-primary mb-2" />
-              <CardTitle className="text-lg">Voice Control</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Navigate anatomy using natural voice commands
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-primary/20 hover:border-primary transition-colors">
-            <CardHeader>
-              <GraduationCap className="h-8 w-8 text-primary mb-2" />
-              <CardTitle className="text-lg">Student Notes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Take and save notes during live sessions
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-primary/20 hover:border-primary transition-colors">
-            <CardHeader>
-              <Users className="h-8 w-8 text-primary mb-2" />
-              <CardTitle className="text-lg">Collaborative</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Multiple students can join and learn together
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Role Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto px-2">
+        {/* Mode Selection */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto px-2">
           <Card className="hover:shadow-lg transition-shadow border-2 hover:border-primary">
             <CardHeader>
               <CardTitle className="text-2xl flex items-center gap-2">
-                <Users className="h-6 w-6 text-primary" />
-                I'm a Teacher
+                <Book className="h-6 w-6 text-primary" />
+                Learn Mode
               </CardTitle>
               <CardDescription>
-                Create and host live anatomy teaching sessions with voice controls
+                Self-paced learning with AI assistance and interactive 3D models
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button 
-                onClick={() => navigate('/teacher')}
+              <Button
+                onClick={() => navigate("/learn")}
                 size="lg"
                 className="w-full bg-gradient-to-r from-primary to-primary-glow hover:opacity-90"
               >
-                Start Teaching
+                Start Learning
               </Button>
             </CardContent>
           </Card>
@@ -99,21 +57,42 @@ export default function Index() {
           <Card className="hover:shadow-lg transition-shadow border-2 hover:border-accent">
             <CardHeader>
               <CardTitle className="text-2xl flex items-center gap-2">
-                <GraduationCap className="h-6 w-6 text-accent" />
-                I'm a Student
+                <Users className="h-6 w-6 text-accent" />
+                Teach Mode
               </CardTitle>
               <CardDescription>
-                Join live sessions, view synchronized 3D models, and take notes
+                Create courses, upload videos, and host live teaching sessions
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button 
-                onClick={() => navigate('/student')}
+              <Button
+                onClick={() => navigate("/teach")}
                 size="lg"
                 variant="secondary"
                 className="w-full bg-gradient-to-r from-accent to-accent/80 text-accent-foreground hover:opacity-90"
               >
-                Join Session
+                Start Teaching
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow border-2 hover:border-green-500">
+            <CardHeader>
+              <CardTitle className="text-2xl flex items-center gap-2">
+                <Users className="h-6 w-6 text-green-500" />
+                Group Study
+              </CardTitle>
+              <CardDescription>
+                Collaborate with peers, schedule sessions, and share content
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={() => navigate("/group-study")}
+                size="lg"
+                className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white hover:opacity-90"
+              >
+                Join Groups
               </Button>
             </CardContent>
           </Card>

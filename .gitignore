@@ -55,6 +55,8 @@ public/models/**/*.blend
 public/models/**/*.blend1
 public/models/**/*.blend2
 public/models/Z-Anatomy/
+public/unity/*
+public/unity/*
 
 # 3D Models - Exported files (uncomment if models are too large)
 # public/models/**/*.glb
@@ -69,3 +71,4 @@ public/models/Z-Anatomy/
 # Unity Builds (large files)
 public/unity/**/Build/*.data.unityweb
 public/unity/**/Build/*.wasm.unityweb
+config/client_secret_576948928537-jl3e070vrnse60doatif8n8anigs5ar7.apps.googleusercontent.com.json
