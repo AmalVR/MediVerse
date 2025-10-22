@@ -10,6 +10,7 @@
       "medium": "/models/skeleton/skeleton-full-med.glb",
       "high": "/models/skeleton/skeleton-full.glb"
     },
+    "youtubeVideos": [],
     "synonyms": [
       { "synonym": "skeleton", "language": "en", "priority": 10 },
       { "synonym": "skeletal system", "language": "en", "priority": 9 },
@@ -24,6 +25,7 @@
     "system": "SKELETAL",
     "parentId": "skeleton",
     "modelPath": "/models/skeleton/skull.glb",
+    "youtubeVideos": [],
     "synonyms": [
       { "synonym": "skull", "language": "en", "priority": 10 },
       { "synonym": "cranium", "language": "en", "priority": 9 },
@@ -41,6 +43,7 @@
       "medium": "/models/cardiovascular/cardiovascular-full-med.glb",
       "high": "/models/cardiovascular/cardiovascular-full.glb"
     },
+    "youtubeVideos": [],
     "synonyms": [
       { "synonym": "heart", "language": "en", "priority": 10 },
       { "synonym": "cardiac muscle", "language": "en", "priority": 8 },
@@ -55,6 +58,7 @@
     "latinName": "Pulmones",
     "system": "RESPIRATORY",
     "modelPath": "/models/respiratory/visceral-full.glb",
+    "youtubeVideos": [],
     "synonyms": [
       { "synonym": "lungs", "language": "en", "priority": 10 },
       { "synonym": "respiratory organs", "language": "en", "priority": 6 },
@@ -68,6 +72,7 @@
     "system": "RESPIRATORY",
     "parentId": "lungs",
     "modelPath": "/models/respiratory/lung-left.glb",
+    "youtubeVideos": [],
     "synonyms": [{ "synonym": "left lung", "language": "en", "priority": 10 }]
   },
   {
@@ -76,6 +81,7 @@
     "latinName": "Cerebrum",
     "system": "NERVOUS",
     "modelPath": "/models/nervous/nervous-full.glb",
+    "youtubeVideos": [],
     "synonyms": [
       { "synonym": "brain", "language": "en", "priority": 10 },
       { "synonym": "cerebrum", "language": "en", "priority": 8 },

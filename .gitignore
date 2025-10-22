@@ -57,7 +57,7 @@ public/models/**/*.blend2
 public/models/Z-Anatomy/
 public/unity/*
 public/unity/*
-
+public_new
 # 3D Models - Exported files (uncomment if models are too large)
 # public/models/**/*.glb
 # public/models/**/*.gltf

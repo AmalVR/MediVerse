@@ -41,6 +41,8 @@ export const UnityAnatomyViewer = forwardRef<
   const [deviceInfo] = useState(() => getDeviceInfo());
   const [unityError, setUnityError] = useState<string | null>(null);
   const [skipUnity, setSkipUnity] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
   const buildPath = getUnityBuildPath(buildType);
 
   const { unityProvider, sendMessage, isLoaded, loadingProgression } =
@@ -115,9 +117,7 @@ export const UnityAnatomyViewer = forwardRef<
         if (missingFiles.length > 0) {
           setSkipUnity(true);
           setUnityError(
-            `Unity WebGL build is incomplete. Missing files: ${missingFiles
-              .map((f) => f.split("/").pop())
-              .join(", ")}`
+            `Unity WebGL build files are missing or incomplete. Please ensure all Unity build files are properly deployed.`
           );
         }
       } catch (error) {
@@ -140,7 +140,7 @@ export const UnityAnatomyViewer = forwardRef<
         event.message.includes("compression")
       ) {
         setUnityError(
-          "Unity WebGL build files are incomplete or corrupted. The 3D anatomy viewer is currently unavailable."
+          "Unity WebGL build files are not available. The 3D anatomy viewer is currently unavailable."
         );
       }
     };
@@ -151,16 +151,39 @@ export const UnityAnatomyViewer = forwardRef<
 
   const loadingPercentage = Math.round(loadingProgression * 100);
 
+  // Retry function that doesn't reload the page
+  const handleRetry = () => {
+    if (retryCount >= 3) {
+      // After 3 retries, show a message that manual intervention is needed
+      setUnityError(
+        "Maximum retry attempts reached. Please check Unity WebGL deployment or contact support."
+      );
+      return;
+    }
+
+    setIsRetrying(true);
+    setRetryCount((prev) => prev + 1);
+    setUnityError(null);
+    setSkipUnity(false);
+
+    // Reset retrying state after a short delay
+    setTimeout(() => {
+      setIsRetrying(false);
+    }, 2000);
+
+    // Force Unity context to reinitialize by updating the key
+    // This will trigger a re-render and re-check of Unity files
+  };
+
   // Skip Unity loading if files are missing
   if (skipUnity) {
     return (
       <UnityPlaceholder
         errorMessage={unityError}
-        onRetry={() => {
-          setUnityError(null);
-          setSkipUnity(false);
-          window.location.reload();
-        }}
+        onRetry={handleRetry}
+        retryCount={retryCount}
+        maxRetries={3}
+        isRetrying={isRetrying}
       />
     );
   }
@@ -170,11 +193,10 @@ export const UnityAnatomyViewer = forwardRef<
     return (
       <UnityPlaceholder
         errorMessage={unityError}
-        onRetry={() => {
-          setUnityError(null);
-          // Force re-render by updating a state
-          window.location.reload();
-        }}
+        onRetry={handleRetry}
+        retryCount={retryCount}
+        maxRetries={3}
+        isRetrying={isRetrying}
       />
     );
   }
@@ -237,6 +259,7 @@ export const UnityAnatomyViewer = forwardRef<
 
       {/* Unity canvas */}
       <Unity
+        key={`unity-${retryCount}`} // Force re-render on retry
         unityProvider={unityProvider}
         style={{
           width: "100%",

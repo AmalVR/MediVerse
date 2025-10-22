@@ -2,71 +2,57 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { UnityAnatomyViewer } from "@/components/UnityAnatomyViewer";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { AIInteractivePanel } from "@/components/AIInteractivePanel";
 import { useToast } from "@/components/ui/use-toast";
-import { anatomyAPI } from "@/lib/api/anatomy-api";
-import type { ViewerState } from "@/types/anatomy";
 import type { IUnityViewerHandle } from "@/types/unity";
-import { sessionSync } from "@/lib/websocket/session-sync";
-import { LogOut, BookOpen, Play, Users } from "lucide-react";
+import {
+  getCuratedVideos,
+  getVideosBySystem,
+} from "@/lib/youtube/curated-videos";
+import { LogOut, BookOpen, Play, Users, GraduationCap } from "lucide-react";
 
 export default function LearnMode() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [sessionCode, setSessionCode] = useState("");
-  const [sessionId, setSessionId] = useState("");
-  const [sessionTitle, setSessionTitle] = useState("");
   const [isSessionActive, setIsSessionActive] = useState(false);
+  const [sessionTitle, setSessionTitle] = useState<string>("");
   const unityRef = useRef<IUnityViewerHandle>(null);
-  const [isJoining, setIsJoining] = useState(false);
+  const [relatedVideos, setRelatedVideos] = useState<
+    Array<{
+      id: string;
+      title: string;
+      description: string;
+      thumbnail: string;
+      viewCount: string;
+    }>
+  >([]);
 
-  const joinSession = async () => {
-    if (!sessionCode.trim()) {
-      toast({
-        title: "Code required",
-        description: "Please enter a session code",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsJoining(true);
-    const studentId = `student-${Date.now()}`;
-
+  const loadRelatedVideos = async () => {
     try {
-      const result = await anatomyAPI.joinSession(sessionCode, studentId);
-
-      if (!result.success || !result.data) {
-        throw new Error(result.error || "Failed to join session");
-      }
-
-      const data = result.data;
-      setSessionId(data.id);
-      setSessionTitle(data.title);
-      setIsSessionActive(true);
-
-      // Connect to WebSocket for real-time sync
-      sessionSync.connect(data.id, studentId, "student");
-
-      toast({
-        title: "Session joined",
-        description: `Connected to ${data.title}`,
-      });
+      const videos = await getCuratedVideos();
+      // Take first 8 videos for the sidebar
+      setRelatedVideos(
+        videos.slice(0, 8).map((video) => ({
+          id: video.id,
+          title: video.title,
+          description: video.description,
+          thumbnail: video.thumbnail,
+          viewCount: video.viewCount,
+        }))
+      );
     } catch (error) {
-      console.error("Error joining session:", error);
-      toast({
-        title: "Error",
-        description: "Failed to join session",
-        variant: "destructive",
-      });
-    } finally {
-      setIsJoining(false);
+      console.error("Failed to load related videos:", error);
+      // Fallback to empty array
+      setRelatedVideos([]);
     }
   };
+
+  // Load videos when component mounts
+  useEffect(() => {
+    loadRelatedVideos();
+  }, []);
 
   const handleVoiceCommand = async (command: {
     action: string;
@@ -104,7 +90,9 @@ export default function LearnMode() {
 
   // Listen for teacher's commands via WebSocket
   useEffect(() => {
-    const handleViewerStateUpdate = (state: ViewerState) => {
+    const handleViewerStateUpdate = (state: {
+      command?: { action: string; target: string };
+    }) => {
       console.log("[LearnMode] Received viewer state update:", state);
 
       // Execute command if present
@@ -124,20 +112,16 @@ export default function LearnMode() {
       }
     };
 
-    // Subscribe to viewer state updates
-    sessionSync.onViewerStateUpdate(handleViewerStateUpdate);
+    // Note: Session sync functionality removed for simplified AI-focused learning
+    // The AI Interactive Panel now handles all learning interactions
 
     return () => {
-      sessionSync.disconnect();
+      // Cleanup if needed
     };
   }, []);
 
   const leaveSession = () => {
-    sessionSync.disconnect();
     setIsSessionActive(false);
-    setSessionId("");
-    setSessionTitle("");
-    setSessionCode("");
     navigate("/");
   };
 
@@ -150,14 +134,6 @@ export default function LearnMode() {
             Learn Mode
           </h1>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => navigate("/teach")}
-              size="sm"
-            >
-              <Users className="mr-2 h-4 w-4" />
-              Teach Mode
-            </Button>
             <Button
               variant="outline"
               onClick={() => navigate("/group-study")}
@@ -174,65 +150,70 @@ export default function LearnMode() {
         </div>
 
         {!isSessionActive ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Join Session */}
-            <Card className="max-w-md mx-auto lg:mx-0">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Play className="h-5 w-5" />
-                  Join Live Session
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="code">Session Code</Label>
-                  <Input
-                    id="code"
-                    placeholder="Enter 6-digit code"
-                    value={sessionCode}
-                    onChange={(e) =>
-                      setSessionCode(e.target.value.toUpperCase())
-                    }
-                    maxLength={6}
-                  />
+          <div className="space-y-6">
+            {/* Google Classroom Integration Info */}
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-6">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <GraduationCap className="h-6 w-6 text-white" />
                 </div>
-                <Button
-                  onClick={joinSession}
-                  className="w-full"
-                  disabled={isJoining}
-                >
-                  {isJoining ? "Joining..." : "Join Session"}
-                </Button>
-              </CardContent>
-            </Card>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-blue-800 mb-2">
+                    Join Your Google Classroom
+                  </h3>
+                  <p className="text-blue-700 mb-4">
+                    Your teacher has set up anatomy learning sessions through
+                    Google Classroom. Join your class to access live sessions,
+                    group studies, and interactive 3D anatomy content.
+                  </p>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => navigate("/teach/google-classroom")}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <GraduationCap className="h-4 w-4 mr-2" />
+                      Join Google Classroom
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsSessionActive(true)}
+                    >
+                      <BookOpen className="h-4 w-4 mr-2" />
+                      Self-Learning Mode
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-            {/* Self-Learning */}
-            <Card className="max-w-md mx-auto lg:mx-0">
+            {/* Self-Learning Option */}
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BookOpen className="h-5 w-5" />
-                  Self-Learning
+                  Self-Learning Mode
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-muted-foreground">
-                  Explore anatomy models independently with AI assistance
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  Explore anatomy models independently with AI assistance and
+                  curated video content
                 </p>
                 <Button
                   onClick={() => setIsSessionActive(true)}
                   className="w-full"
                   variant="secondary"
                 >
-                  Start Learning
+                  Start Independent Learning
                 </Button>
               </CardContent>
             </Card>
           </div>
         ) : (
-          <div className="flex flex-col h-[calc(100vh-10rem)]">
+          <div className="space-y-4">
             {/* Session Header */}
             {sessionTitle && (
-              <div className="flex items-center justify-between mb-4 flex-shrink-0">
+              <div className="flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <span className="text-lg font-semibold">{sessionTitle}</span>
                 </div>
@@ -242,10 +223,10 @@ export default function LearnMode() {
               </div>
             )}
 
-            {/* Main Content Area */}
-            <div className="flex-1 flex flex-col lg:flex-row gap-4 min-h-0">
-              {/* Unity Viewer */}
-              <div className="flex-1 lg:flex-[2] min-h-[400px]">
+            {/* Main Content Area - Fixed Height Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-12rem)]">
+              {/* Unity Viewer - Fixed Height */}
+              <div className="lg:col-span-2">
                 <Card className="h-full">
                   <CardContent className="h-full p-0">
                     <UnityAnatomyViewer
@@ -262,12 +243,76 @@ export default function LearnMode() {
                 </Card>
               </div>
 
-              {/* AI Interactive Panel */}
-              <div className="lg:flex-1 lg:max-w-[450px] min-h-[400px] lg:min-h-0">
-                <Card className="h-full flex flex-col">
+              {/* Right Sidebar - Fixed Height with Scroll */}
+              <div className="space-y-4 h-full overflow-hidden">
+                {/* AI Interactive Panel - Fixed Height */}
+                <Card className="h-[50%] flex flex-col">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Interactive AI</CardTitle>
+                  </CardHeader>
                   <div className="flex-1 min-h-0 overflow-hidden">
                     <AIInteractivePanel onCommand={handleVoiceCommand} />
                   </div>
+                </Card>
+
+                {/* Related Videos - Scrollable */}
+                <Card className="h-[50%] flex flex-col">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Related Videos</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-1 min-h-0 overflow-hidden p-2">
+                    <div className="h-full overflow-y-auto space-y-2">
+                      {relatedVideos.length > 0 ? (
+                        relatedVideos.map((video) => (
+                          <div
+                            key={video.id}
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                            onClick={() => {
+                              // Navigate to video or open in new tab
+                              window.open(
+                                `https://www.youtube.com/watch?v=${video.id}`,
+                                "_blank"
+                              );
+                            }}
+                            title={`Watch: ${video.title}`}
+                          >
+                            <div className="w-16 h-12 bg-muted rounded flex-shrink-0 overflow-hidden">
+                              {video.thumbnail ? (
+                                <img
+                                  src={video.thumbnail}
+                                  alt={video.title}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Play className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-sm font-medium line-clamp-2">
+                                {video.title}
+                              </h4>
+                              <p className="text-xs text-muted-foreground">
+                                {video.description}
+                              </p>
+                              {video.viewCount !== undefined && (
+                                <p className="text-xs text-muted-foreground">
+                                  {parseInt(video.viewCount).toLocaleString()}{" "}
+                                  views
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center text-muted-foreground py-4">
+                          <Play className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">Loading videos...</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
                 </Card>
               </div>
             </div>

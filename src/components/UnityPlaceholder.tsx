@@ -5,85 +5,116 @@ import { Brain, Download, ExternalLink } from "lucide-react";
 interface UnityPlaceholderProps {
   onRetry?: () => void;
   errorMessage?: string;
+  retryCount?: number;
+  maxRetries?: number;
+  isRetrying?: boolean;
 }
 
 export function UnityPlaceholder({
   onRetry,
   errorMessage,
+  retryCount = 0,
+  maxRetries = 3,
+  isRetrying = false,
 }: UnityPlaceholderProps) {
+  const canRetry = retryCount < maxRetries;
   return (
-    <div className="relative w-full h-full bg-gradient-to-br from-primary/5 to-accent/5">
-      <div className="absolute inset-0 flex items-center justify-center">
-        <Card className="p-8 max-w-lg mx-4 text-center">
-          <CardHeader>
-            <div className="flex justify-center mb-4">
-              <div className="relative">
-                <Brain className="h-16 w-16 text-primary" />
-                <div className="absolute -top-2 -right-2 h-6 w-6">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-6 w-6 bg-primary"></span>
-                </div>
+    <div className="relative w-full h-full bg-gradient-to-br from-primary/5 to-accent/5 flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-center p-4 border-b bg-background/50">
+        <div className="flex items-center gap-3">
+          <Brain className="h-6 w-6 text-primary" />
+          <h3 className="text-lg font-semibold">3D Anatomy Viewer</h3>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="text-center space-y-4 max-w-md">
+          {/* Warning Icon */}
+          <div className="flex justify-center">
+            <div className="relative">
+              <div className="h-16 w-16 rounded-full bg-yellow-100 flex items-center justify-center">
+                <Brain className="h-8 w-8 text-yellow-600" />
+              </div>
+              <div className="absolute -top-1 -right-1 h-5 w-5 bg-yellow-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs font-bold">!</span>
               </div>
             </div>
-            <CardTitle className="text-2xl mb-2">3D Anatomy Viewer</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-muted-foreground">
-              The interactive 3D anatomy viewer is currently unavailable. This
-              feature requires Unity WebGL files to be properly deployed.
+          </div>
+
+          {/* Warning Message */}
+          <div className="space-y-2">
+            <h4 className="text-lg font-medium text-yellow-800">
+              3D Viewer Unavailable
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              Unity WebGL files are not deployed. You can still use video
+              tutorials and AI assistance.
             </p>
+          </div>
 
-            {errorMessage && (
-              <div className="bg-red-50 border border-red-200 p-4 rounded-lg text-left">
-                <h4 className="font-semibold text-red-800 mb-2">
-                  Error Details:
-                </h4>
-                <p className="text-sm text-red-700">{errorMessage}</p>
-              </div>
-            )}
-
-            <div className="bg-muted/50 p-4 rounded-lg text-left">
-              <h4 className="font-semibold mb-2">Available Features:</h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Video tutorials and content sharing</li>
-                <li>• Google Classroom integration</li>
-                <li>• Live teaching sessions</li>
-                <li>• Group study collaboration</li>
-                <li>• AI-powered learning assistance</li>
-              </ul>
+          {/* Error Details (if any) */}
+          {errorMessage ? (
+            <div className="bg-red-50 border border-red-200 p-3 rounded-lg text-left">
+              <p className="text-xs text-red-700">{errorMessage}</p>
             </div>
-
-            <div className="flex gap-3 justify-center">
-              {onRetry && (
-                <Button onClick={onRetry} variant="outline">
-                  <Download className="mr-2 h-4 w-4" />
-                  Retry Loading
-                </Button>
-              )}
-              <Button variant="outline" asChild>
-                <a
-                  href="https://github.com/MediVerse/MediVerse"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Learn More
-                </a>
-              </Button>
-            </div>
-
-            <div className="text-xs text-muted-foreground">
-              <p>
-                To enable the 3D viewer, ensure Unity WebGL build files are
-                deployed in the{" "}
-                <code className="bg-muted px-1 rounded">
-                  /public/unity/Build/
-                </code>{" "}
-                directory.
+          ) : (
+            <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-left">
+              <p className="text-xs text-blue-700">
+                The 3D viewer requires Unity WebGL build files to be deployed to
+                the server.
               </p>
             </div>
-          </CardContent>
-        </Card>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 justify-center">
+            {onRetry && canRetry && (
+              <Button
+                onClick={onRetry}
+                variant="outline"
+                size="sm"
+                disabled={isRetrying}
+              >
+                <Download
+                  className={`mr-1 h-3 w-3 ${isRetrying ? "animate-spin" : ""}`}
+                />
+                {isRetrying
+                  ? "Retrying..."
+                  : `Retry (${retryCount}/${maxRetries})`}
+              </Button>
+            )}
+            {!canRetry && retryCount > 0 && (
+              <div className="text-xs text-muted-foreground text-center">
+                Maximum retry attempts reached
+              </div>
+            )}
+            <Button variant="outline" size="sm" asChild>
+              <a
+                href="https://github.com/MediVerse/MediVerse"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="mr-1 h-3 w-3" />
+                Help
+              </a>
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="p-3 bg-muted/30 border-t">
+        <div className="text-xs text-muted-foreground text-center">
+          <p>
+            Deploy Unity WebGL files to{" "}
+            <code className="bg-muted px-1 rounded text-xs">
+              /public/unity/Build/
+            </code>{" "}
+            to enable 3D viewer
+          </p>
+        </div>
       </div>
     </div>
   );

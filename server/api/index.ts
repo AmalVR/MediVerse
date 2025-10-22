@@ -240,6 +240,40 @@ app.post("/api/sessions", async (req, res) => {
   }
 });
 
+app.get("/api/sessions/active", async (req, res) => {
+  try {
+    const sessions = await prisma.teachingSession.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+
+    res.json(sessions);
+  } catch (error) {
+    console.error("Error fetching active sessions:", error);
+    res.status(500).json({ error: "Failed to fetch active sessions" });
+  }
+});
+
+app.get("/api/sessions/:sessionId", async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const session = await prisma.teachingSession.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+
+    res.json(session);
+  } catch (error) {
+    console.error("Error fetching session:", error);
+    res.status(500).json({ error: "Failed to fetch session" });
+  }
+});
+
 app.post("/api/sessions/join", async (req, res) => {
   try {
     const { code, studentId } = req.body;

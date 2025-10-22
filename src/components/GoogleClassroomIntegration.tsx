@@ -315,7 +315,7 @@ export function GoogleClassroomIntegration({
             <BookOpen className="h-5 w-5" />
             Google Classroom Integration
           </div>
-          {isSignedIn ? (
+          {googleClassroom.isUserSignedIn() ? (
             <Button variant="outline" size="sm" onClick={handleSignOut}>
               <LogOut className="mr-2 h-4 w-4" />
               Sign Out
@@ -333,7 +333,7 @@ export function GoogleClassroomIntegration({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {!isSignedIn ? (
+        {!googleClassroom.isUserSignedIn() ? (
           <div className="text-center py-8">
             <BookOpen className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-semibold mb-2">

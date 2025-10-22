@@ -1,15 +1,26 @@
 /**
- * AI Interactive Panel - Modern Lovable-style UI
- * Combines text input, voice input, and LLM-powered anatomy learning
+ * AI Interactive Panel - Medical Learning Specialist
+ * AI-powered anatomy tutor with medical knowledge base integration
  */
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mic, MicOff, Send, Sparkles, X } from "lucide-react";
+import {
+  Mic,
+  MicOff,
+  Send,
+  Sparkles,
+  X,
+  Brain,
+  BookOpen,
+  Stethoscope,
+  Activity,
+} from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { anatomyAPI } from "@/lib/api/anatomy-api";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface SpeechRecognition extends EventTarget {
   continuous: boolean;
@@ -168,7 +179,7 @@ export function AIInteractivePanel({ onCommand }: AIInteractivePanelProps) {
     {
       role: "assistant",
       content:
-        "👋 Hi! I'm your AI anatomy assistant. Ask me anything about the human body, or use commands like 'show skeleton' or 'zoom in'.",
+        "🩺 Welcome! I'm your AI medical tutor specialized in anatomy and physiology. I can help you with:\n\n• **Anatomy & Physiology** - Detailed explanations of body systems\n• **Pathology & Disease** - Understanding medical conditions\n• **Clinical Cases** - Real-world medical scenarios\n• **Study Strategies** - Personalized learning approaches\n\nAsk me anything or try commands like 'explain cardiovascular system' or 'show me the heart anatomy'.",
       timestamp: new Date(),
     },
   ]);
@@ -323,9 +334,9 @@ export function AIInteractivePanel({ onCommand }: AIInteractivePanelProps) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-background/50 backdrop-blur-sm rounded-t-xl">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-purple-500" />
-          <h3 className="font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-pink-500">
-            AI Interactive Mode
+          <Brain className="h-5 w-5 text-blue-500" />
+          <h3 className="font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">
+            AI Medical Tutor
           </h3>
         </div>
         <Button
@@ -336,6 +347,46 @@ export function AIInteractivePanel({ onCommand }: AIInteractivePanelProps) {
         >
           <X className="h-4 w-4" />
         </Button>
+      </div>
+
+      {/* Medical Knowledge Base Categories */}
+      <div className="px-4 py-3 border-b border-border/50 bg-background/30">
+        <div className="flex flex-wrap gap-2">
+          <Badge
+            variant="outline"
+            className="cursor-pointer hover:bg-blue-50 hover:border-blue-300 text-xs"
+            onClick={() =>
+              setInputText("Explain cardiovascular system anatomy")
+            }
+          >
+            <Stethoscope className="h-3 w-3 mr-1" />
+            Cardiovascular
+          </Badge>
+          <Badge
+            variant="outline"
+            className="cursor-pointer hover:bg-green-50 hover:border-green-300 text-xs"
+            onClick={() => setInputText("Explain nervous system structure")}
+          >
+            <Brain className="h-3 w-3 mr-1" />
+            Nervous
+          </Badge>
+          <Badge
+            variant="outline"
+            className="cursor-pointer hover:bg-purple-50 hover:border-purple-300 text-xs"
+            onClick={() => setInputText("Explain muscular system")}
+          >
+            <Activity className="h-3 w-3 mr-1" />
+            Muscular
+          </Badge>
+          <Badge
+            variant="outline"
+            className="cursor-pointer hover:bg-orange-50 hover:border-orange-300 text-xs"
+            onClick={() => setInputText("Explain respiratory system")}
+          >
+            <BookOpen className="h-3 w-3 mr-1" />
+            Respiratory
+          </Badge>
+        </div>
       </div>
 
       {/* Messages */}
