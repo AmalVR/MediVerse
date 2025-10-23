@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OAuth Configuration Test</title>
+  </head>
+  <body>
+    <h1>OAuth Configuration Test</h1>
+    <div id="results"></div>
+
+    <script type="module">
+      const resultsDiv = document.getElementById("results");
+
+      function log(message, type = "info") {
+        const color =
+          type === "error" ? "red" : type === "success" ? "green" : "black";
+        resultsDiv.innerHTML += `<div style="color: ${color};">${message}</div>`;
+      }
+
+      log("🔍 Testing OAuth Configuration in Browser Context");
+      log("===============================================");
+
+      // Test 1: Check if Vite environment variables are available
+      log("1. Checking Vite environment variables...");
+
+      try {
+        const clientId = import.meta.env.VITE_MOODLE_OAUTH_CLIENT_ID;
+        const clientSecret = import.meta.env.VITE_MOODLE_OAUTH_CLIENT_SECRET;
+        const redirectUri = import.meta.env.VITE_MOODLE_OAUTH_REDIRECT_URI;
+
+        log(
+          `Client ID: ${clientId ? "✅ Set" : "❌ Missing"}`,
+          clientId ? "success" : "error"
+        );
+        log(
+          `Client Secret: ${clientSecret ? "✅ Set" : "❌ Missing"}`,
+          clientSecret ? "success" : "error"
+        );
+        log(
+          `Redirect URI: ${redirectUri || "❌ Missing"}`,
+          redirectUri ? "success" : "error"
+        );
+
+        if (!clientId || !clientSecret || !redirectUri) {
+          log("❌ Missing required OAuth environment variables", "error");
+          throw new Error("Missing OAuth configuration");
+        }
+
+        // Test 2: Check for placeholder values
+        log("2. Checking for placeholder values...");
+        const placeholderValues = [
+          "your_google_client_id",
+          "demo_client_id",
+          "placeholder_client_id",
+          "your_google_client_secret",
+          "demo_client_secret",
+          "placeholder_client_secret",
+        ];
+
+        if (placeholderValues.includes(clientId)) {
+          log("❌ Client ID is a placeholder value!", "error");
+        } else {
+          log("✅ Client ID appears to be real", "success");
+        }
+
+        if (placeholderValues.includes(clientSecret)) {
+          log("❌ Client Secret is a placeholder value!", "error");
+        } else {
+          log("✅ Client Secret appears to be real", "success");
+        }
+
+        // Test 3: Check Google OAuth format
+        log("3. Checking Google OAuth format...");
+        if (clientId.includes(".apps.googleusercontent.com")) {
+          log("✅ Client ID has correct Google OAuth format", "success");
+        } else {
+          log("⚠️ Client ID doesn't match Google OAuth format", "error");
+        }
+
+        if (clientSecret.startsWith("GOCSPX-")) {
+          log("✅ Client Secret has correct Google OAuth format", "success");
+        } else {
+          log("⚠️ Client Secret doesn't match Google OAuth format", "error");
+        }
+
+        // Test 4: Test MoodleAuthService configuration
+        log("4. Testing MoodleAuthService configuration...");
+
+        // Simulate the isConfigured check
+        const isConfigured = !!(
+          clientId &&
+          clientSecret &&
+          !placeholderValues.includes(clientId) &&
+          !placeholderValues.includes(clientSecret)
+        );
+
+        log(
+          `Is configured: ${isConfigured ? "✅ Yes" : "❌ No"}`,
+          isConfigured ? "success" : "error"
+        );
+
+        if (isConfigured) {
+          log("✅ OAuth configuration is valid!", "success");
+          log("The authentication should work correctly.", "success");
+        } else {
+          log("❌ OAuth configuration is invalid", "error");
+          log("This is why you're getting the OAuth error.", "error");
+        }
+      } catch (error) {
+        log(`❌ Error testing OAuth configuration: ${error.message}`, "error");
+      }
+
+      log("✅ OAuth configuration test completed");
+    </script>
+  </body>
+</html>

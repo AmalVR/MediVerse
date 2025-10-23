@@ -151,7 +151,7 @@ export default function LearnMode() {
 
         {!isSessionActive ? (
           <div className="space-y-6">
-            {/* Google Classroom Integration Info */}
+            {/* Moodle Integration Info */}
             <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-6">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
@@ -159,20 +159,20 @@ export default function LearnMode() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-blue-800 mb-2">
-                    Join Your Google Classroom
+                    Join Your Moodle Course
                   </h3>
                   <p className="text-blue-700 mb-4">
                     Your teacher has set up anatomy learning sessions through
-                    Google Classroom. Join your class to access live sessions,
-                    group studies, and interactive 3D anatomy content.
+                    Moodle. Join your course to access live sessions, group
+                    studies, and interactive 3D anatomy content.
                   </p>
                   <div className="flex gap-3">
                     <Button
-                      onClick={() => navigate("/teach/google-classroom")}
+                      onClick={() => navigate("/learn")}
                       className="bg-blue-600 hover:bg-blue-700"
                     >
                       <GraduationCap className="h-4 w-4 mr-2" />
-                      Join Google Classroom
+                      Browse Courses
                     </Button>
                     <Button
                       variant="outline"

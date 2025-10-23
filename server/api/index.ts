@@ -242,15 +242,24 @@ app.post("/api/sessions", async (req, res) => {
 
 app.get("/api/sessions/active", async (req, res) => {
   try {
+    console.log("Starting sessions/active request");
+    console.log("Prisma client:", typeof prisma);
+
     const sessions = await prisma.teachingSession.findMany({
       where: { isActive: true },
       orderBy: { createdAt: "desc" },
       take: 10,
     });
 
+    console.log("Sessions found:", sessions.length);
     res.json(sessions);
   } catch (error) {
     console.error("Error fetching active sessions:", error);
+    console.error("Error details:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : "No stack trace",
+      name: error instanceof Error ? error.name : "Unknown error type",
+    });
     res.status(500).json({ error: "Failed to fetch active sessions" });
   }
 });

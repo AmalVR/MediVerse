@@ -37,13 +37,16 @@ RUN cd server && npm ci --omit=dev
 # Copy built files and necessary source
 COPY --from=builder /app/server/dist ./server/dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/.prisma ./server/node_modules/.prisma
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/schema.zmodel ./
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/.env ./
 
 # Create config directory
 RUN mkdir -p /app/config
 
 EXPOSE 3000 3001
 
-CMD ["npm", "run", "server"]
+CMD ["sh", "-c", "cd server && npm run start"]
 

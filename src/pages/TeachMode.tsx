@@ -31,7 +31,6 @@ import { ContentUploader } from "@/components/education/ContentUploader";
 import { ContentList } from "@/components/education/ContentList";
 import { VideoUploader } from "@/components/VideoUploader";
 import { VideoPlayer } from "@/components/VideoPlayer";
-import { GoogleClassroomIntegration } from "@/components/GoogleClassroomIntegration";
 import type { EducationalContent, ContentFilters } from "@/lib/education/types";
 
 export default function TeachMode() {
@@ -369,12 +368,12 @@ export default function TeachMode() {
             My Courses
           </Button>
           <Button
-            variant={activeTab === "classroom" ? "default" : "ghost"}
+            variant={activeTab === "moodle" ? "default" : "ghost"}
             size="sm"
-            onClick={() => setActiveTab("classroom")}
+            onClick={() => setActiveTab("moodle")}
           >
             <Users className="mr-2 h-4 w-4" />
-            Google Classroom
+            Moodle LMS
           </Button>
         </div>
 
@@ -592,17 +591,21 @@ export default function TeachMode() {
           </div>
         )}
 
-        {/* Google Classroom Tab */}
-        {activeTab === "classroom" && (
+        {/* Moodle LMS Tab */}
+        {activeTab === "moodle" && (
           <div className="max-w-6xl mx-auto">
-            <GoogleClassroomIntegration
-              onShareContent={(courseId, content) => {
-                toast({
-                  title: "Content shared",
-                  description: `Shared to Google Classroom course`,
-                });
-              }}
-            />
+            <div className="text-center py-8">
+              <h3 className="text-lg font-semibold mb-2">
+                Moodle LMS Integration
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Manage your anatomy courses and content through Moodle LMS
+              </p>
+              <Button onClick={() => navigate("/teach/create-session")}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create New Course
+              </Button>
+            </div>
           </div>
         )}
       </div>

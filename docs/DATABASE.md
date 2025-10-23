@@ -1,13 +1,44 @@
 # Database Architecture
 
-MediVerse uses **ZenStack** with **Prisma** for a type-safe, schema-driven database layer.
+MediVerse uses **ZenStack** with **Prisma** for a type-safe, schema-driven database layer, with a shared PostgreSQL instance serving both MediVerse and Moodle LMS.
 
 ## Technology Stack
 
 - **ZenStack** - Enhanced Prisma with built-in access control and validation
 - **Prisma** - Type-safe ORM and query builder
-- **PostgreSQL** - Production database
+- **PostgreSQL** - Production database (shared instance)
 - **Zod** - Runtime schema validation (auto-generated from ZenStack)
+- **Moodle LMS** - Learning Management System database
+
+## Database Architecture
+
+### Shared PostgreSQL Instance
+
+MediVerse uses a single PostgreSQL instance with two separate databases:
+
+- **`mediverse`** - MediVerse application data
+- **`moodle`** - Moodle LMS data
+
+**Benefits:**
+
+- Simplified infrastructure management
+- Reduced resource usage
+- Easier backup and maintenance
+- Shared connection pooling
+- Consistent data management
+
+### Database Initialization
+
+The `scripts/init-databases.sh` script initializes both databases:
+
+```bash
+#!/bin/bash
+# Creates both mediverse and moodle databases
+psql -h postgres -p 5432 -U mediverse -d postgres -c "CREATE DATABASE IF NOT EXISTS mediverse;"
+psql -h postgres -p 5432 -U mediverse -d postgres -c "CREATE DATABASE IF NOT EXISTS moodle;"
+psql -h postgres -p 5432 -U mediverse -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE mediverse TO mediverse;"
+psql -h postgres -p 5432 -U mediverse -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE moodle TO moodle;"
+```
 
 ## Why ZenStack?
 
@@ -176,6 +207,87 @@ enum CommandAction {
   SYSTEM_TOGGLE,
 }
 ```
+
+## Moodle Integration
+
+### Database Schema Integration
+
+The MediVerse database includes Moodle reference fields in the `TeachingSession` model:
+
+```prisma
+model TeachingSession {
+  id              String           @id @default(cuid())
+  code            String           @unique
+  teacherId       String
+  title           String
+  isActive        Boolean          @default(true)
+  highlightedPart String?
+  cameraPosition  Json?
+  modelRotation   Json?
+  visibleSystems  String[]         @default([])
+  slicePosition   Json?
+  notes           SessionNote[]
+  students        SessionStudent[]
+  commands        VoiceCommand[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  endedAt         DateTime?
+
+  // Moodle integration fields
+  moodleCourseId   String?  // Reference to Moodle course
+  moodleActivityId String? // Reference to Moodle activity
+
+  @@index([code])
+  @@index([isActive])
+}
+```
+
+### Data Synchronization Strategy
+
+#### Teaching Sessions → Moodle Activities
+
+- Teaching sessions are automatically synced to Moodle as course activities
+- Session metadata (title, description, anatomy focus) becomes Moodle activity content
+- Real-time session state is maintained in MediVerse database
+- Moodle provides course organization and student enrollment
+
+#### User Authentication
+
+- Users authenticate via Google OAuth through MediVerse
+- MediVerse creates/updates corresponding Moodle user accounts
+- Single sign-on experience across both platforms
+- User roles (teacher/student) are synchronized
+
+#### Content Management
+
+- Videos, quizzes, and assignments are stored in Moodle database
+- MediVerse UI displays Moodle content seamlessly
+- Content metadata is cached in MediVerse for performance
+- File uploads go directly to Moodle file system
+
+### Connection Strings
+
+#### MediVerse Database
+
+```env
+DATABASE_URL=postgresql://mediverse:mediverse_password@postgres:5432/mediverse
+```
+
+#### Moodle Database
+
+```env
+MOODLE_DB_URL=postgresql://mediverse:mediverse_password@postgres:5432/moodle
+```
+
+### Data Ownership
+
+| Data Type         | Owner     | Purpose                            |
+| ----------------- | --------- | ---------------------------------- |
+| Anatomy Models    | MediVerse | 3D visualization and interaction   |
+| Teaching Sessions | MediVerse | Real-time collaboration state      |
+| Course Content    | Moodle    | Learning materials and assessments |
+| User Accounts     | Both      | Authentication and authorization   |
+| Student Progress  | Moodle    | Learning analytics and completion  |
 
 ## Database Operations
 

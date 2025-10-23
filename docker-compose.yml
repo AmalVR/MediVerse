@@ -47,7 +47,6 @@ services:
         condition: service_healthy
     networks:
       - mediverse-network
-    command: npm run server:api
 
   # WebSocket Server
   websocket:
@@ -103,6 +102,35 @@ services:
       - mediverse-network
     command: redis-server --appendonly yes
 
+  # Moodle LMS
+  moodle:
+    image: php:8.2-apache
+    container_name: mediverse-moodle
+    restart: unless-stopped
+    environment:
+      - APACHE_DOCUMENT_ROOT=/var/www/html
+    ports:
+      - "8081:80"
+    volumes:
+      - moodle_data:/var/www/html
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mediverse-network
+    command: >
+      bash -c "
+        apt-get update &&
+        apt-get install -y wget unzip libzip-dev libpng-dev libjpeg-dev libfreetype6-dev libpq-dev &&
+        docker-php-ext-install gd zip pdo pdo_pgsql &&
+        wget https://download.moodle.org/download.php/direct/stable403/moodle-latest-403.zip &&
+        unzip moodle-latest-403.zip &&
+        mv moodle/* /var/www/html/ &&
+        chown -R www-data:www-data /var/www/html &&
+        chmod -R 755 /var/www/html &&
+        apache2-foreground
+      "
+
   # pgAdmin (optional - for database management)
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -131,4 +159,6 @@ volumes:
   redis_data:
     driver: local
   pgadmin_data:
+    driver: local
+  moodle_data:
     driver: local

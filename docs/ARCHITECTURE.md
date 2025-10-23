@@ -2,7 +2,7 @@
 
 ## Overview
 
-MediVerse is a voice-driven anatomy learning platform using Z-Anatomy 3D models, Google Cloud Platform services, and real-time collaboration features.
+MediVerse is a voice-driven anatomy learning platform using Z-Anatomy 3D models, Moodle LMS integration, and real-time collaboration features. The platform combines interactive 3D anatomy visualization with comprehensive learning management capabilities.
 
 ## Tech Stack
 
@@ -21,10 +21,11 @@ MediVerse is a voice-driven anatomy learning platform using Z-Anatomy 3D models,
 - **GCP Speech-to-Text** - Voice transcription with medical model
 - **GCP Dialogflow** - Natural language understanding
 - **GCP Text-to-Speech** - Voice feedback
-- **PostgreSQL** - Database
+- **PostgreSQL** - Database (shared instance for MediVerse and Moodle)
 - **Prisma** - ORM
 - **ZenStack** - Type-safe API generation
 - **Socket.io Server** - WebSocket server
+- **Moodle LMS** - Learning Management System
 
 ### 3D Assets
 
@@ -88,6 +89,42 @@ schema.zmodel
   - Pre-generated common phrases
   - Multi-voice support
 
+#### Moodle LMS Integration
+
+- **Moodle API Service** (`src/lib/moodle/api.ts`)
+
+  - REST API integration with Moodle
+  - User management and authentication
+  - Course creation and management
+  - Content upload and organization
+
+- **Moodle Auth Service** (`src/lib/moodle/auth.ts`)
+
+  - OAuth 2.0 authentication flow
+  - Google Sign-In integration
+  - User session management
+  - Token generation and refresh
+
+- **Moodle Course Service** (`src/lib/moodle/course.ts`)
+
+  - Anatomy-specific course creation
+  - Student enrollment management
+  - Course content organization
+  - Progress tracking integration
+
+- **Moodle Content Service** (`src/lib/moodle/content.ts`)
+
+  - Video upload to Moodle courses
+  - Quiz and assignment creation
+  - File management and organization
+  - Content metadata handling
+
+- **Moodle Sync Service** (`src/lib/moodle/sync.ts`)
+  - Bidirectional data synchronization
+  - Teaching session to Moodle activity mapping
+  - Content updates and deletions
+  - Performance optimization with caching
+
 #### Real-time Sync
 
 - **WebSocket Client** (`src/lib/websocket/session-sync.ts`)
@@ -121,7 +158,58 @@ POST   /api/sessions/{id}/end
 GET    /api/sessions/{id}/analytics
 ```
 
-### 4. UI Layer
+### 4. Database Architecture
+
+#### Shared PostgreSQL Instance
+
+MediVerse uses a single PostgreSQL instance with two separate databases:
+
+- **`mediverse`** - MediVerse application data
+- **`moodle`** - Moodle LMS data
+
+**Benefits:**
+
+- Simplified infrastructure management
+- Reduced resource usage
+- Easier backup and maintenance
+- Shared connection pooling
+
+#### MediVerse Database Schema
+
+```
+mediverse database
+├── AnatomyPart - Core anatomical structures
+├── AnatomySynonym - Multi-language name mappings
+├── TeachingSession - Live teaching sessions
+│   ├── moodleCourseId - Reference to Moodle course
+│   └── moodleActivityId - Reference to Moodle activity
+├── SessionStudent - Student participants
+├── SessionNote - Student notes
+└── VoiceCommand - Analytics logs
+```
+
+#### Moodle Database Schema
+
+```
+moodle database
+├── mdl_course - Course definitions
+├── mdl_course_modules - Course activities
+├── mdl_user - User accounts
+├── mdl_enrol - Enrollment records
+├── mdl_quiz - Quiz definitions
+├── mdl_assign - Assignment definitions
+├── mdl_resource - File resources
+└── mdl_files - File storage metadata
+```
+
+#### Data Synchronization
+
+- **Teaching Sessions** → Moodle Activities
+- **User Authentication** → Moodle User Accounts
+- **Course Content** → Moodle Resources
+- **Progress Tracking** → Moodle Completion Status
+
+### 5. UI Layer
 
 #### Components
 
@@ -156,6 +244,49 @@ GET    /api/sessions/{id}/analytics
 - Note-taking
 - Passive following
 
+**Moodle Integration Components**
+
+- **MoodleAuth** (`src/components/MoodleAuth.tsx`)
+
+  - OAuth 2.0 authentication flow
+  - Google Sign-In integration
+  - User session management
+  - Authentication status display
+
+- **CourseManagement** (`src/components/CourseManagement.tsx`)
+
+  - Teacher course creation and management
+  - Content upload integration
+  - Student enrollment tracking
+  - Course analytics and reporting
+
+- **StudentCourseEnrollment** (`src/components/StudentCourseEnrollment.tsx`)
+
+  - Course browsing and search
+  - Student enrollment management
+  - Progress tracking
+  - Course content access
+
+- **MoodleVideoUpload** (`src/components/MoodleVideoUpload.tsx`)
+
+  - Video file upload to Moodle courses
+  - Metadata management
+  - Upload progress tracking
+  - File validation and processing
+
+- **MoodleQuizBuilder** (`src/components/MoodleQuizBuilder.tsx`)
+
+  - Interactive quiz creation
+  - Question and answer management
+  - Quiz configuration options
+  - Preview and validation
+
+- **MoodleAssignmentCreator** (`src/components/MoodleAssignmentCreator.tsx`)
+  - Assignment creation and configuration
+  - Due date and grading setup
+  - Assignment type selection
+  - Preview and validation
+
 ## Data Flow
 
 ### Voice Command Flow
@@ -183,6 +314,28 @@ Students:
 1. Receive WebSocket message
 2. Update viewer state
 3. Sync 3D view
+```
+
+### Moodle Integration Flow
+
+```
+Authentication:
+1. User signs in via Google OAuth → MediVerse
+2. MediVerse creates/updates Moodle user account
+3. Generate Moodle API token for seamless access
+4. Store both MediVerse session and Moodle token
+
+Content Creation:
+1. Teacher creates content in MediVerse UI
+2. Content uploaded to Moodle course via API
+3. Moodle activity created and linked
+4. Teaching session synced to Moodle activity
+
+Student Access:
+1. Student enrolls in Moodle course
+2. Course content displayed in MediVerse UI
+3. Progress tracked in both systems
+4. Assessments completed through Moodle
 ```
 
 ## Z-Anatomy Integration

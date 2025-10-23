@@ -29,7 +29,6 @@ import {
   Share2,
 } from "lucide-react";
 import { ContentList } from "@/components/education/ContentList";
-import { GoogleClassroomIntegration } from "@/components/GoogleClassroomIntegration";
 import type { EducationalContent, ContentFilters } from "@/lib/education/types";
 
 interface StudyGroup {
@@ -367,12 +366,12 @@ export default function GroupStudyMode() {
         {/* Tab Navigation */}
         <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
           <Button
-            variant={activeTab === "classroom" ? "default" : "ghost"}
+            variant={activeTab === "moodle" ? "default" : "ghost"}
             size="sm"
-            onClick={() => setActiveTab("classroom")}
+            onClick={() => setActiveTab("moodle")}
           >
             <BookOpen className="mr-2 h-4 w-4" />
-            Google Classroom
+            Moodle LMS
           </Button>
           <Button
             variant={activeTab === "live" ? "default" : "ghost"}
@@ -392,17 +391,21 @@ export default function GroupStudyMode() {
           </Button>
         </div>
 
-        {/* Google Classroom Tab */}
-        {activeTab === "classroom" && (
+        {/* Moodle LMS Tab */}
+        {activeTab === "moodle" && (
           <div className="max-w-6xl mx-auto">
-            <GoogleClassroomIntegration
-              onShareContent={(courseId, content) => {
-                toast({
-                  title: "Content shared",
-                  description: `Shared to Google Classroom course`,
-                });
-              }}
-            />
+            <div className="text-center py-8">
+              <h3 className="text-lg font-semibold mb-2">
+                Moodle LMS Integration
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Manage group study sessions through Moodle LMS
+              </p>
+              <Button onClick={() => navigate("/group-study")}>
+                <BookOpen className="mr-2 h-4 w-4" />
+                Browse Study Groups
+              </Button>
+            </div>
           </div>
         )}
 

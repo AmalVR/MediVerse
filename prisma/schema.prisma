@@ -59,6 +59,10 @@ model TeachingSession {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   endedAt         DateTime?
+  
+  // Moodle integration fields
+  moodleCourseId   String?  // Reference to Moodle course
+  moodleActivityId String? // Reference to Moodle activity
 
   @@index([code])
   @@index([isActive])

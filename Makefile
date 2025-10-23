@@ -24,13 +24,21 @@ help:
 	@echo "  make db-studio      Open Prisma Studio"
 	@echo ""
 	@echo "Docker:"
-	@echo "  make docker-dev     Start Docker dev environment"
-	@echo "  make docker-prod    Start Docker production"
-	@echo "  make docker-stop    Stop Docker containers"
-	@echo "  make docker-clean   Remove containers and volumes"
+	@echo "  make docker-dev         Start Docker dev environment"
+	@echo "  make docker-prod        Start Docker production"
+	@echo "  make docker-stop        Stop Docker containers"
+	@echo "  make docker-clean       Remove containers and volumes"
+	@echo "  make docker-rebuild-api Rebuild API container (no-cache)"
+	@echo "  make docker-rebuild-moodle Rebuild Moodle container (no-cache)"
+	@echo "  make docker-rebuild-all Rebuild all containers (no-cache)"
+	@echo "  make docker-restart-api Restart API container only"
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev            Start frontend dev server"
+	@echo "  make dev-full       Full development setup (clean + rebuild + start)"
+	@echo "  make dev-clean      Clean development artifacts"
+	@echo "  make dev-rebuild    Rebuild development environment"
+	@echo "  make dev-status     Show development status"
 	@echo "  make server         Start backend servers"
 	@echo ""
 	@echo "Models:"
@@ -40,6 +48,13 @@ help:
 	@echo "Testing:"
 	@echo "  make test-api       Test API endpoints"
 	@echo "  make test-dialogflow Test Dialogflow integration"
+	@echo ""
+	@echo "Build:"
+	@echo "  make build              Build frontend"
+	@echo "  make build-server       Build server only"
+	@echo "  make build-docker       Build Docker images"
+	@echo "  make build-docker-clean Build Docker images (no-cache)"
+	@echo "  make build-all          Build everything (no-cache)"
 	@echo ""
 	@echo "Maintenance:"
 	@echo "  make clean          Clean build artifacts"
@@ -110,12 +125,47 @@ docker-clean:
 	@docker-compose down -v
 	@echo "✅ Docker cleaned"
 
+docker-rebuild-api:
+	@echo "🔨 Rebuilding API container with no-cache..."
+	@./scripts/docker-rebuild.sh api
+	@echo "✅ API container rebuilt"
+
+docker-rebuild-all:
+	@echo "🔨 Rebuilding all containers with no-cache..."
+	@./scripts/docker-rebuild.sh
+	@echo "✅ All containers rebuilt"
+
+docker-rebuild-moodle:
+	@echo "🔨 Rebuilding Moodle container with no-cache..."
+	@./scripts/docker-rebuild.sh moodle
+	@echo "✅ Moodle container rebuilt"
+
+docker-restart-api:
+	@echo "🔄 Restarting API container..."
+	@docker-compose restart api
+	@echo "✅ API container restarted"
+
 logs:
 	@docker-compose logs -f
 
 # Development
 dev:
 	@npm run dev
+
+dev-full:
+	@echo "🚀 Starting full development environment..."
+	@./scripts/dev-workflow.sh full
+
+dev-clean:
+	@echo "🧹 Cleaning development environment..."
+	@./scripts/dev-workflow.sh clean
+
+dev-rebuild:
+	@echo "🔨 Rebuilding development environment..."
+	@./scripts/dev-workflow.sh rebuild
+
+dev-status:
+	@./scripts/dev-workflow.sh status
 
 server:
 	@npm run server
@@ -169,3 +219,37 @@ build:
 build-docker:
 	@docker-compose build
 
+build-docker-clean:
+	@echo "🔨 Clean Docker build (no-cache)..."
+	@docker-compose build --no-cache
+	@echo "✅ Clean Docker build complete"
+
+build-server:
+	@echo "🔨 Building server..."
+	@cd server && npm run build
+	@echo "✅ Server built"
+
+build-all: build-server build-docker-clean
+	@echo "✅ All builds complete"
+
+
+# OAuth Configuration
+oauth-validate:
+	@echo "🔍 Validating OAuth configuration..."
+	@./scripts/validate-env.sh
+
+oauth-backup:
+	@echo "💾 Backing up OAuth configuration..."
+	@./scripts/backup-oauth-config.sh
+
+oauth-restore:
+	@echo "🔄 Restoring OAuth configuration..."
+	@./scripts/restore-oauth-config.sh
+
+dev-safe:
+	@echo "🚀 Starting development with OAuth validation..."
+	@./scripts/dev-start.sh
+
+oauth-status:
+	@echo "📊 Checking OAuth status..."
+	@./scripts/oauth-status.sh

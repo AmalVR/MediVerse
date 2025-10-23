@@ -65,10 +65,16 @@ public_new
 # ZenStack
 .zenstack/
 
+# OAuth and Secrets
+.env*
+.oauth-backup/
+*secret*
+*credential*
+config/client_secret_*.json
+config/*.json
+.history/.env*
+.history/*oauth*
+.history/*secret*
+
 # History
 .history/
-
-# Unity Builds (large files)
-public/unity/**/Build/*.data.unityweb
-public/unity/**/Build/*.wasm.unityweb
-config/client_secret_576948928537-jl3e070vrnse60doatif8n8anigs5ar7.apps.googleusercontent.com.json

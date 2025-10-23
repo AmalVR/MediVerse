@@ -34,7 +34,12 @@
     "test:debug": "playwright test --debug",
     "test:e2e": "playwright test tests/e2e",
     "test:mobile": "playwright test tests/e2e/mobile.spec.ts",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "dev:safe": "./scripts/dev-start.sh",
+    "oauth:validate": "./scripts/validate-env.sh",
+    "oauth:backup": "./scripts/backup-oauth-config.sh",
+    "oauth:restore": "./scripts/restore-oauth-config.sh",
+    "oauth:monitor": "./scripts/monitor-oauth.sh"
   },
   "dependencies": {
     "@google-cloud/dialogflow": "^6.9.0",

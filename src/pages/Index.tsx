@@ -9,6 +9,9 @@ import { TopicCard, defaultAnatomyTopics } from "@/components/TopicCard";
 import { UnityAnatomyViewer } from "@/components/UnityAnatomyViewer";
 import { AIInteractivePanel } from "@/components/AIInteractivePanel";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuth as useUserAuth } from "@/contexts/UserContext";
+import { UnifiedLogin } from "@/components/UnifiedLogin";
+import { PaymentWall } from "@/components/PaymentWall";
 import { anatomyAPI } from "@/lib/api/anatomy-api";
 import { useToast } from "@/components/ui/use-toast";
 import type { IUnityViewerHandle } from "@/types/unity";
@@ -27,7 +30,6 @@ import {
   TrendingUp,
   Video,
   Menu,
-  Home,
   Search,
   Settings,
   Bell,
@@ -130,41 +132,7 @@ function Header({
           <Button variant="ghost" size="sm">
             <Bell className="h-5 w-5" />
           </Button>
-          {isAuthenticated ? (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 text-sm">
-                <User className="h-4 w-4" />
-                <span className="hidden sm:inline">{user?.name}</span>
-                {user?.isGuest && (
-                  <Badge variant="secondary" className="text-xs">
-                    Guest
-                  </Badge>
-                )}
-              </div>
-              <Button variant="ghost" size="sm">
-                <Settings className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={signOut}
-                title="Sign out"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={signInAsGuest}>
-                <User className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Guest</span>
-              </Button>
-              <Button size="sm" onClick={signInWithGoogle}>
-                <LogIn className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Sign In</span>
-              </Button>
-            </div>
-          )}
+          <UnifiedLogin compact />
         </div>
       </div>
     </header>
@@ -182,6 +150,7 @@ function Sidebar({
   navigate,
   isAuthenticated,
   signOut,
+  handleFeatureAccess,
 }: {
   sidebarOpen: boolean;
   selectedCategory: string;
@@ -192,6 +161,7 @@ function Sidebar({
   navigate: (path: string) => void;
   isAuthenticated: boolean;
   signOut: () => void;
+  handleFeatureAccess: (featureName: string, action: () => void) => void;
 }) {
   if (!sidebarOpen) return null;
 
@@ -201,17 +171,13 @@ function Sidebar({
         {/* Navigation */}
         <div className="space-y-2">
           <Button
-            variant={selectedCategory === "all" ? "secondary" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => setSelectedCategory("all")}
-          >
-            <Home className="h-4 w-4 mr-3" />
-            Home
-          </Button>
-          <Button
             variant={selectedCategory === "live" ? "secondary" : "ghost"}
             className="w-full justify-start"
-            onClick={() => setSelectedCategory("live")}
+            onClick={() =>
+              handleFeatureAccess("Live Sessions", () =>
+                setSelectedCategory("live")
+              )
+            }
           >
             <Users className="h-4 w-4 mr-3" />
             Live Sessions
@@ -219,7 +185,9 @@ function Sidebar({
           <Button
             variant={selectedCategory === "videos" ? "secondary" : "ghost"}
             className="w-full justify-start"
-            onClick={() => setSelectedCategory("videos")}
+            onClick={() =>
+              handleFeatureAccess("Videos", () => setSelectedCategory("videos"))
+            }
           >
             <Play className="h-4 w-4 mr-3" />
             Videos
@@ -227,7 +195,11 @@ function Sidebar({
           <Button
             variant={selectedCategory === "mentors" ? "secondary" : "ghost"}
             className="w-full justify-start"
-            onClick={() => setSelectedCategory("mentors")}
+            onClick={() =>
+              handleFeatureAccess("Live Mentors", () =>
+                setSelectedCategory("mentors")
+              )
+            }
           >
             <UserCheck className="h-4 w-4 mr-3" />
             Live Mentors
@@ -235,7 +207,11 @@ function Sidebar({
           <Button
             variant={selectedCategory === "teach" ? "secondary" : "ghost"}
             className="w-full justify-start"
-            onClick={() => setSelectedCategory("teach")}
+            onClick={() =>
+              handleFeatureAccess("Teach Mode", () =>
+                setSelectedCategory("teach")
+              )
+            }
           >
             <GraduationCap className="h-4 w-4 mr-3" />
             Teach Mode
@@ -422,9 +398,9 @@ function TeacherMode({ navigate }: { navigate: (path: string) => void }) {
     studentsAttended: number;
     topic: string;
   }) => {
-    // Navigate to Google Classroom with pre-filled topic
+    // Navigate to create session with pre-filled topic
     navigate(
-      `/teach/google-classroom?topic=${topic.topic}&title=${encodeURIComponent(
+      `/teach/create-session?topic=${topic.topic}&title=${encodeURIComponent(
         topic.title
       )}`
     );
@@ -492,17 +468,17 @@ function TeacherMode({ navigate }: { navigate: (path: string) => void }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card
           className="cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => navigate("/teach/google-classroom")}
+          onClick={() => navigate("/teach/create-session")}
         >
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <GraduationCap className="h-5 w-5 text-blue-500" />
-              Google Classroom Integration
+              Create Teaching Session
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-3">
-              Connect your Google Classroom and create custom anatomy sessions
+              Create custom anatomy teaching sessions with Moodle integration
             </p>
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
@@ -523,7 +499,7 @@ function TeacherMode({ navigate }: { navigate: (path: string) => void }) {
 
         <Card
           className="cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => navigate("/teach/google-classroom")}
+          onClick={() => navigate("/group-study")}
         >
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -533,8 +509,7 @@ function TeacherMode({ navigate }: { navigate: (path: string) => void }) {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-3">
-              Organize collaborative anatomy study sessions through Google
-              Classroom
+              Organize collaborative anatomy study sessions through Moodle
             </p>
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
@@ -579,11 +554,16 @@ function TeacherMode({ navigate }: { navigate: (path: string) => void }) {
 export default function Index() {
   const navigate = useNavigate();
   const authContext = useAuth();
+  const {
+    isAuthenticated,
+    isTeacher,
+    isStudent,
+    user: userProfile,
+  } = useUserAuth();
   const { toast } = useToast();
 
   // Auth state
   const user = authContext?.user || null;
-  const isAuthenticated = authContext?.isAuthenticated || false;
   const signInAsGuest = authContext?.signInAsGuest || (() => {});
   const signInWithGoogle =
     authContext?.signInWithGoogle || (() => Promise.resolve());
@@ -591,7 +571,7 @@ export default function Index() {
 
   // UI state
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState("home");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const unityRef = useRef<IUnityViewerHandle>(null);
 
@@ -765,6 +745,33 @@ export default function Index() {
     }
   };
 
+  const handleFeatureAccess = (featureName: string, action: () => void) => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Sign In Required",
+        description: `Please sign in to access ${featureName}.`,
+        variant: "default",
+        action: (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              // Show login modal or redirect to login
+              const loginModal = document.getElementById("login-modal");
+              if (loginModal) {
+                loginModal.style.display = "block";
+              }
+            }}
+          >
+            Sign In
+          </Button>
+        ),
+      });
+      return;
+    }
+    action();
+  };
+
   const handleStartLearning = (topicId: string) => {
     const topic = defaultAnatomyTopics.find((t) => t.id === topicId);
     if (topic) {
@@ -845,10 +852,11 @@ export default function Index() {
           navigate={navigate}
           isAuthenticated={isAuthenticated}
           signOut={signOut}
+          handleFeatureAccess={handleFeatureAccess}
         />
 
         <main className="flex-1 p-6">
-          {selectedCategory === "home" ? (
+          {selectedCategory === "all" ? (
             <div className="space-y-8">
               {/* Hero Section - AI Interactive Learning */}
               <HeroSection
@@ -866,6 +874,9 @@ export default function Index() {
                   icon: BookOpen,
                 }}
               />
+
+              {/* Payment Wall - Show if not authenticated */}
+              {!isAuthenticated && <PaymentWall />}
 
               {/* AI Features Grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -926,7 +937,10 @@ export default function Index() {
                     badge={{ text: "Most Popular", variant: "secondary" }}
                     action={{
                       text: "Start Learning →",
-                      onClick: () => setSelectedCategory("learn"),
+                      onClick: () =>
+                        handleFeatureAccess("AI Interactive Learning", () =>
+                          setSelectedCategory("learn")
+                        ),
                       variant: "outline",
                     }}
                     className="cursor-pointer hover:shadow-lg transition-all duration-200"
@@ -942,7 +956,10 @@ export default function Index() {
                     badge={{ text: "Comprehensive", variant: "outline" }}
                     action={{
                       text: "Explore →",
-                      onClick: () => setSelectedCategory("unified"),
+                      onClick: () =>
+                        handleFeatureAccess("Unified Learning", () =>
+                          setSelectedCategory("unified")
+                        ),
                       variant: "outline",
                     }}
                     className="cursor-pointer hover:shadow-lg transition-all duration-200"
@@ -990,6 +1007,39 @@ export default function Index() {
             </div>
           </div>
         </main>
+      </div>
+
+      {/* Login Modal */}
+      <div
+        id="login-modal"
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        style={{ display: "none" }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            e.currentTarget.style.display = "none";
+          }
+        }}
+      >
+        <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Sign In to Continue</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const modal = document.getElementById("login-modal");
+                if (modal) modal.style.display = "none";
+              }}
+            >
+              ✕
+            </Button>
+          </div>
+          <p className="text-muted-foreground mb-6">
+            Sign in to access all learning features, track your progress, and
+            join live sessions.
+          </p>
+          <UnifiedLogin className="w-full" />
+        </div>
       </div>
     </div>
   );
