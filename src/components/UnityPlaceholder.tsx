@@ -18,6 +18,11 @@ export function UnityPlaceholder({
   isRetrying = false,
 }: UnityPlaceholderProps) {
   const canRetry = retryCount < maxRetries;
+  const isIncompleteBuild =
+    errorMessage?.includes("framework") ||
+    errorMessage?.includes("wasm") ||
+    errorMessage?.includes("corrupt");
+
   return (
     <div className="relative w-full h-full bg-gradient-to-br from-primary/5 to-accent/5 flex flex-col">
       {/* Header */}
@@ -31,39 +36,48 @@ export function UnityPlaceholder({
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="text-center space-y-4 max-w-md">
-          {/* Warning Icon */}
+          {/* Info Icon */}
           <div className="flex justify-center">
-            <div className="relative">
-              <div className="h-16 w-16 rounded-full bg-yellow-100 flex items-center justify-center">
-                <Brain className="h-8 w-8 text-yellow-600" />
-              </div>
-              <div className="absolute -top-1 -right-1 h-5 w-5 bg-yellow-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs font-bold">!</span>
-              </div>
+            <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
+              <Brain className="h-8 w-8 text-blue-600" />
             </div>
           </div>
 
           {/* Warning Message */}
           <div className="space-y-2">
-            <h4 className="text-lg font-medium text-yellow-800">
-              3D Viewer Unavailable
+            <h4 className="text-lg font-medium text-blue-800">
+              {isIncompleteBuild
+                ? "Unity Build Incomplete"
+                : "3D Viewer Optional"}
             </h4>
             <p className="text-sm text-muted-foreground">
-              Unity WebGL files are not deployed. You can still use video
-              tutorials and AI assistance.
+              {isIncompleteBuild
+                ? "The Unity WebGL build is missing required files. You can still explore anatomy through videos and AI interactive learning."
+                : "The 3D anatomy viewer is currently unavailable, but you can still explore anatomy through videos and AI interactive learning."}
             </p>
           </div>
 
           {/* Error Details (if any) */}
           {errorMessage ? (
-            <div className="bg-red-50 border border-red-200 p-3 rounded-lg text-left">
-              <p className="text-xs text-red-700">{errorMessage}</p>
+            <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-left">
+              <div className="flex items-start gap-2">
+                <div className="text-xs text-yellow-800">
+                  <p className="font-medium mb-1">Technical Details:</p>
+                  <p className="text-yellow-700">{errorMessage}</p>
+                  {isIncompleteBuild && (
+                    <p className="text-yellow-600 mt-2 text-xs">
+                      <strong>Solution:</strong> Rebuild Unity WebGL with all
+                      required files (framework.js.unityweb, wasm.unityweb)
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           ) : (
-            <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-left">
-              <p className="text-xs text-blue-700">
-                The 3D viewer requires Unity WebGL build files to be deployed to
-                the server.
+            <div className="bg-green-50 border border-green-200 p-3 rounded-lg text-left">
+              <p className="text-xs text-green-700">
+                This feature is optional. You can continue using all other
+                learning features.
               </p>
             </div>
           )}
@@ -108,11 +122,8 @@ export function UnityPlaceholder({
       <div className="p-3 bg-muted/30 border-t">
         <div className="text-xs text-muted-foreground text-center">
           <p>
-            Deploy Unity WebGL files to{" "}
-            <code className="bg-muted px-1 rounded text-xs">
-              /public/unity/Build/
-            </code>{" "}
-            to enable 3D viewer
+            <strong>Continue Learning:</strong> Explore anatomy through videos,
+            AI interactive learning, and live sessions
           </p>
         </div>
       </div>

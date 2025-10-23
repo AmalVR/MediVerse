@@ -11,6 +11,7 @@ import {
   getUnityBuildPath,
   getDeviceInfo,
 } from "@/lib/platform-detect";
+import { config } from "@/lib/config";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { UnityCommandExecutor } from "@/lib/unity/UnityCommandExecutor";
@@ -40,17 +41,27 @@ export const UnityAnatomyViewer = forwardRef<
   const [buildType] = useState(() => detectUnityBuild());
   const [deviceInfo] = useState(() => getDeviceInfo());
   const [unityError, setUnityError] = useState<string | null>(null);
-  const [skipUnity, setSkipUnity] = useState(false);
+  const [skipUnity, setSkipUnity] = useState(!config.unityEnabled);
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
   const buildPath = getUnityBuildPath(buildType);
 
+  // Always initialize Unity context, but only use it if enabled
   const { unityProvider, sendMessage, isLoaded, loadingProgression } =
     useUnityContext({
-      loaderUrl: `${buildPath}/Build/pc-build.loader.js`,
-      dataUrl: `${buildPath}/Build/pc-build.data.unityweb`,
-      frameworkUrl: `${buildPath}/Build/pc-build.framework.js.unityweb`,
-      codeUrl: `${buildPath}/Build/pc-build.wasm.unityweb`,
+      loaderUrl: config.unityEnabled
+        ? `${buildPath}/Build/pc-build.loader.js`
+        : "",
+      dataUrl: config.unityEnabled
+        ? `${buildPath}/Build/pc-build.data.unityweb`
+        : "",
+      // Try to load framework and code URLs - will fallback gracefully if missing
+      frameworkUrl: config.unityEnabled
+        ? `${buildPath}/Build/pc-build.framework.js.unityweb`
+        : "",
+      codeUrl: config.unityEnabled
+        ? `${buildPath}/Build/pc-build.wasm.unityweb`
+        : "",
       webglContextAttributes: {
         preserveDrawingBuffer: true,
         powerPreference: "high-performance",
@@ -92,8 +103,10 @@ export const UnityAnatomyViewer = forwardRef<
     }
   }, [isLoaded, onReady]);
 
-  // Check if Unity build files exist
+  // Check if Unity build files exist (optional check)
   useEffect(() => {
+    if (!config.unityEnabled) return;
+
     const checkUnityFiles = async () => {
       try {
         // Check if required Unity files exist
@@ -106,7 +119,11 @@ export const UnityAnatomyViewer = forwardRef<
         for (const file of requiredFiles) {
           try {
             const response = await fetch(file, { method: "HEAD" });
-            if (!response.ok) {
+            // Check if response is OK and has correct content type
+            if (
+              !response.ok ||
+              response.headers.get("content-type")?.includes("text/html")
+            ) {
               missingFiles.push(file);
             }
           } catch {
@@ -115,21 +132,27 @@ export const UnityAnatomyViewer = forwardRef<
         }
 
         if (missingFiles.length > 0) {
+          console.info(
+            "Unity WebGL build files not available - using fallback mode"
+          );
           setSkipUnity(true);
           setUnityError(
-            `Unity WebGL build files are missing or incomplete. Please ensure all Unity build files are properly deployed.`
+            `3D Anatomy Viewer is currently unavailable. You can still explore anatomy content through videos and interactive learning.`
           );
         }
       } catch (error) {
         console.warn("Could not check Unity files:", error);
+        // Don't fail the entire app if we can't check Unity files
       }
     };
 
     checkUnityFiles();
   }, [buildPath]);
 
-  // Handle Unity loading errors
+  // Handle Unity loading errors gracefully
   useEffect(() => {
+    if (!config.unityEnabled) return;
+
     const handleError = (event: ErrorEvent) => {
       if (
         event.message.includes("createUnityInstance") ||
@@ -139,9 +162,11 @@ export const UnityAnatomyViewer = forwardRef<
         event.message.includes("corrupt") ||
         event.message.includes("compression")
       ) {
+        console.info("Unity WebGL error detected - switching to fallback mode");
         setUnityError(
-          "Unity WebGL build files are not available. The 3D anatomy viewer is currently unavailable."
+          "3D Anatomy Viewer is currently unavailable. You can still explore anatomy content through videos and interactive learning."
         );
+        setSkipUnity(true);
       }
     };
 
@@ -153,10 +178,10 @@ export const UnityAnatomyViewer = forwardRef<
 
   // Retry function that doesn't reload the page
   const handleRetry = () => {
-    if (retryCount >= 3) {
-      // After 3 retries, show a message that manual intervention is needed
+    if (retryCount >= 2) {
+      // After 2 retries, show a message that Unity is optional
       setUnityError(
-        "Maximum retry attempts reached. Please check Unity WebGL deployment or contact support."
+        "3D Anatomy Viewer is currently unavailable. This is optional - you can continue using videos and interactive learning features."
       );
       return;
     }
@@ -174,6 +199,18 @@ export const UnityAnatomyViewer = forwardRef<
     // Force Unity context to reinitialize by updating the key
     // This will trigger a re-render and re-check of Unity files
   };
+
+  // If Unity is disabled via config, show placeholder immediately
+  if (!config.unityEnabled) {
+    return (
+      <UnityPlaceholder
+        errorMessage="3D Anatomy Viewer is disabled. You can still explore anatomy content through videos and interactive learning."
+        retryCount={0}
+        maxRetries={0}
+        isRetrying={false}
+      />
+    );
+  }
 
   // Skip Unity loading if files are missing
   if (skipUnity) {
