@@ -37,7 +37,7 @@ The `.env` file contains OAuth configuration:
 # Google OAuth Configuration
 VITE_MOODLE_OAUTH_CLIENT_ID="your-client-id.apps.googleusercontent.com"
 VITE_MOODLE_OAUTH_CLIENT_SECRET="GOCSPX-your-client-secret"
-VITE_MOODLE_OAUTH_REDIRECT_URI="http://localhost:8081/auth/oauth2/callback.php"
+VITE_MOODLE_OAUTH_REDIRECT_URI="http://localhost:8080"
 ```
 
 ### Google Cloud Console
@@ -47,7 +47,7 @@ Required Google Cloud Console settings:
 - **Project**: mediverse-classroom-int
 - **OAuth 2.0 Client ID**: your-client-id.apps.googleusercontent.com
 - **Authorized JavaScript origins**: http://localhost:8080
-- **Authorized redirect URIs**: http://localhost:8081/auth/oauth2/callback.php
+- **Authorized redirect URIs**: http://localhost:8080
 
 ## Available Commands
 

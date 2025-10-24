@@ -69,8 +69,8 @@ export const env = {
   MOODLE_OAUTH_CLIENT_ID: getEnvVar("VITE_MOODLE_OAUTH_CLIENT_ID"),
   MOODLE_OAUTH_CLIENT_SECRET: getEnvVar("VITE_MOODLE_OAUTH_CLIENT_SECRET"),
   MOODLE_OAUTH_REDIRECT_URI: getEnvVar(
-    "MOODLE_OAUTH_REDIRECT_URI",
-    "http://localhost:8081/auth/oauth2/callback.php"
+    "VITE_MOODLE_OAUTH_REDIRECT_URI",
+    "http://localhost:8080"
   ),
 
   // Video Storage

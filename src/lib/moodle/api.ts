@@ -200,11 +200,50 @@ export class MoodleAPIService {
    * Check if the API is properly configured
    */
   isConfigured(): boolean {
+    // Require real Moodle configuration for production-like behavior
     return !!(
       env.MOODLE_API_URL &&
       env.MOODLE_API_TOKEN &&
-      env.MOODLE_API_TOKEN !== "placeholder_token"
+      env.MOODLE_API_TOKEN !== "placeholder_token" &&
+      env.MOODLE_API_TOKEN !== "your_moodle_api_token_here"
     );
+  }
+
+  /**
+   * Ensure we have a valid token, auto-generate if needed
+   */
+  private async ensureValidToken(): Promise<string> {
+    // If we already have a real token, use it
+    if (this.token && this.isConfigured()) {
+      return this.token;
+    }
+
+    console.log("🔄 Generating real Moodle API token...");
+
+    try {
+      // Try to generate token via backend API
+      const response = await fetch("/api/moodle/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        this.token = data.token;
+        console.log(`✅ Generated real Moodle token via ${data.method}`);
+        return this.token;
+      } else {
+        throw new Error(`Backend token generation failed: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("❌ Failed to generate Moodle API token:", error);
+      throw new MoodleAPIError(
+        "Moodle API token generation failed. Please ensure Moodle is running and properly configured.",
+        "TOKEN_GENERATION_FAILED"
+      );
+    }
   }
 
   /**
@@ -214,14 +253,11 @@ export class MoodleAPIService {
     wsfunction: string,
     params: Record<string, any> = {}
   ): Promise<any> {
-    if (!this.isConfigured()) {
-      throw new MoodleAPIError(
-        "Moodle API is not properly configured. Please check your environment variables and ensure Moodle is running."
-      );
-    }
+    // Ensure we have a valid token
+    const token = await this.ensureValidToken();
 
     const url = new URL(this.baseUrl);
-    url.searchParams.append("wstoken", this.token);
+    url.searchParams.append("wstoken", token);
     url.searchParams.append("wsfunction", wsfunction);
     url.searchParams.append("moodlewsrestformat", "json");
 
@@ -250,6 +286,7 @@ export class MoodleAPIService {
     });
 
     try {
+      console.log(`🔄 Making Moodle API request: ${wsfunction}`);
       const response = await fetch(url.toString(), {
         method: "POST",
         headers: {
@@ -275,11 +312,15 @@ export class MoodleAPIService {
         );
       }
 
+      console.log(`✅ Moodle API request successful: ${wsfunction}`);
       return data;
     } catch (error) {
       if (error instanceof MoodleAPIError) {
         throw error;
       }
+
+      // Re-throw network errors without fallback
+      console.error(`❌ Moodle API request failed: ${wsfunction}`, error);
       throw new MoodleAPIError(
         `Network error: ${
           error instanceof Error ? error.message : "Unknown error"
@@ -288,6 +329,11 @@ export class MoodleAPIService {
       );
     }
   }
+
+  /**
+   * Get mock response for development when Moodle is not available
+   * REMOVED: No longer using mock responses for production-like behavior
+   */
 
   /**
    * Get site information
@@ -300,10 +346,14 @@ export class MoodleAPIService {
    * Get user information by ID
    */
   async getUserById(userId: number): Promise<MoodleUser> {
-    const response = await this.makeRequest("core_user_get_users_by_id", {
-      userids: [userId],
+    // Since core_user_get_users_by_id is not available in our service,
+    // we'll use core_user_get_users_by_field with id field
+    const response = await this.makeRequest("core_user_get_users_by_field", {
+      field: "id",
+      values: [userId.toString()],
     });
-    return response.users[0];
+    // Moodle returns the response directly as an array, not wrapped in a users property
+    return response[0];
   }
 
   /**
@@ -314,7 +364,8 @@ export class MoodleAPIService {
       field,
       values: [value],
     });
-    return response.users[0];
+    // Moodle returns the response directly as an array, not wrapped in a users property
+    return response[0];
   }
 
   /**
@@ -324,7 +375,8 @@ export class MoodleAPIService {
     const response = await this.makeRequest("core_user_create_users", {
       users: [userData],
     });
-    return response.users[0];
+    // Moodle returns the response directly as an array, not wrapped in a users property
+    return response[0];
   }
 
   /**
@@ -490,11 +542,26 @@ export class MoodleAPIService {
    */
   async generateUserToken(
     userId: number,
-    service: string = "moodle_mobile_app"
+    service: string = "mediverse_api"
   ): Promise<string> {
     const response = await this.makeRequest("core_user_create_user_key", {
       userid: userId,
       service: service,
+    });
+    return response.key;
+  }
+
+  /**
+   * Generate user token using username and password
+   */
+  async generateUserTokenWithPassword(
+    username: string,
+    password: string
+  ): Promise<string> {
+    const response = await this.makeRequest("core_user_create_user_key", {
+      username: username,
+      password: password,
+      service: "mediverse_api",
     });
     return response.key;
   }
@@ -570,7 +637,11 @@ export const moodleAPI = {
   },
 
   async generateUserToken(username: string, password: string) {
-    return this.instance.generateUserToken(username, password);
+    return this.instance.generateUserTokenWithPassword(username, password);
+  },
+
+  async generateUserTokenById(userId: number, service?: string) {
+    return this.instance.generateUserToken(userId, service);
   },
 
   async createUser(userData: Partial<MoodleUser>) {

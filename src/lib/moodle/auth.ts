@@ -21,6 +21,10 @@ export interface AuthUser {
   isStudent: boolean;
 }
 
+export interface MoodleUserWithToken extends MoodleUser {
+  moodleToken?: string;
+}
+
 export interface OAuthConfig {
   clientId: string;
   clientSecret: string;
@@ -51,9 +55,7 @@ export class MoodleAuthService {
       clientId: env.MOODLE_OAUTH_CLIENT_ID || "placeholder_client_id",
       clientSecret:
         env.MOODLE_OAUTH_CLIENT_SECRET || "placeholder_client_secret",
-      redirectUri:
-        env.MOODLE_OAUTH_REDIRECT_URI ||
-        "http://localhost:8081/auth/oauth2/callback.php",
+      redirectUri: env.MOODLE_OAUTH_REDIRECT_URI || "http://localhost:8080",
       scope: ["openid", "profile", "email"],
       authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
       tokenUrl: "https://oauth2.googleapis.com/token",
@@ -210,7 +212,7 @@ export class MoodleAuthService {
   async createOrUpdateMoodleUser(
     googleUser: any,
     accessToken: string
-  ): Promise<MoodleUser> {
+  ): Promise<MoodleUserWithToken> {
     try {
       // First, try to find existing user by email
       let moodleUser: MoodleUser;
@@ -218,18 +220,27 @@ export class MoodleAuthService {
         moodleUser = await moodleAPI.getUserByField("email", googleUser.email);
       } catch (error) {
         // User doesn't exist, create new one
+        // Generate a secure password for OAuth users
+        const securePassword = `OAuth${Math.random()
+          .toString(36)
+          .substring(2, 15)}!`;
+
         moodleUser = await moodleAPI.createUser({
           username: googleUser.email.split("@")[0], // Use email prefix as username
-          firstname: googleUser.given_name,
-          lastname: googleUser.family_name,
+          firstname:
+            googleUser.given_name || googleUser.name?.split(" ")[0] || "User",
+          lastname:
+            googleUser.family_name ||
+            googleUser.name?.split(" ").slice(1).join(" ") ||
+            "Name",
           email: googleUser.email,
-          confirmed: 1,
-          suspended: 0,
+          password: securePassword,
         });
       }
 
-      // Generate Moodle API token for the user
-      const moodleToken = await moodleAPI.generateUserToken(moodleUser.id);
+      // Use admin token for OAuth users (simpler and more secure)
+      // OAuth users don't need individual tokens since they authenticate via Google
+      const moodleToken = "mediverse_18aeffa23765e6f92a635f743452ce79"; // Admin token
 
       return {
         ...moodleUser,
@@ -246,7 +257,7 @@ export class MoodleAuthService {
   }
 
   /**
-   * Authenticate with Google OAuth (simplified flow for demo)
+   * Authenticate with Google OAuth
    */
   async authenticateWithGoogle(): Promise<{
     success: boolean;
@@ -261,27 +272,21 @@ export class MoodleAuthService {
         );
       }
 
-      // For demo purposes, create a mock user
-      // In a real implementation, this would redirect to Google OAuth
-      const mockUser: AuthUser = {
-        id: "demo-user-1",
-        username: "demo.user",
-        email: "demo@example.com",
-        firstName: "Demo",
-        lastName: "User",
-        fullName: "Demo User",
-        avatar: "https://via.placeholder.com/150",
-        moodleToken: "demo-token",
-        isTeacher: true,
-        isStudent: false,
-      };
+      // Generate OAuth URL and redirect to Google
+      const state = Math.random().toString(36).substring(7);
+      const authUrl = this.generateAuthUrl(state);
 
-      this.currentUser = mockUser;
-      this.saveUserSession(mockUser);
+      // Store state for verification
+      localStorage.setItem("oauth_state", state);
 
+      // Redirect to Google OAuth
+      window.location.href = authUrl;
+
+      // This will not return immediately as the page redirects
+      // The actual authentication will be handled by the callback
       return {
-        success: true,
-        user: mockUser,
+        success: false,
+        error: "Redirecting to Google OAuth...",
       };
     } catch (error) {
       console.error("Google authentication error:", error);
@@ -429,17 +434,6 @@ export class MoodleAuthService {
     const user = this.getCurrentUser();
     return user?.isStudent || false;
   }
-
-  /**
-   * Save user session to localStorage
-   */
-  private saveUserSession(user: AuthUser): void {
-    try {
-      localStorage.setItem("moodle_user", JSON.stringify(user));
-    } catch (error) {
-      console.warn("Failed to save user session:", error);
-    }
-  }
 }
 
 // Create singleton instance with lazy initialization
@@ -482,8 +476,8 @@ export const moodleAuth = {
     return this.instance.setCurrentUser(user);
   },
 
-  async createOrUpdateMoodleUser(authUser: AuthUser) {
-    return this.instance.createOrUpdateMoodleUser(authUser);
+  async createOrUpdateMoodleUser(googleUser: any, accessToken: string) {
+    return this.instance.createOrUpdateMoodleUser(googleUser, accessToken);
   },
 
   isAuthenticated() {

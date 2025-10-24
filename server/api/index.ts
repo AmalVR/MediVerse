@@ -12,6 +12,7 @@ config({ path: resolve(__dirname, "../../.env") });
 import express from "express";
 import cors from "cors";
 import { PrismaClient } from "@prisma/client";
+import fetch from "node-fetch";
 // Import from parent directory's generated client
 // import { dialogflow } from "../../src/lib/gcp/dialogflow";
 // import { textToSpeech } from "../../src/lib/gcp/text-to-speech";
@@ -36,6 +37,167 @@ app.use(express.json());
 // Health check
 app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Moodle Token Generation Endpoints
+app.post("/api/moodle/token", async (req, res) => {
+  try {
+    console.log("🔄 Generating Moodle API token...");
+
+    // Get admin credentials from environment
+    const adminUsername = process.env.MOODLE_ADMIN_USERNAME || "admin";
+    const adminPassword = process.env.MOODLE_ADMIN_PASSWORD || "admin123!";
+    const moodleUrl = process.env.MOODLE_URL || "http://localhost:8081";
+
+    console.log("📋 Using credentials:", {
+      username: adminUsername,
+      moodleUrl,
+      hasPassword: !!adminPassword,
+    });
+
+    // Method 1: Try direct token generation via Moodle REST API
+    try {
+      const tokenResponse = await fetch(`${moodleUrl}/login/token.php`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          username: adminUsername,
+          password: adminPassword,
+          service: "mediverse_api",
+        }),
+      });
+
+      if (tokenResponse.ok) {
+        const tokenData = await tokenResponse.json();
+
+        if (tokenData.token) {
+          console.log("✅ Token generated successfully via REST API");
+          return res.json({
+            token: tokenData.token,
+            method: "rest_api",
+          });
+        } else {
+          console.log("⚠️ REST API failed:", tokenData.error);
+        }
+      }
+    } catch (restError) {
+      console.log("⚠️ REST API method failed:", restError);
+    }
+
+    // Method 1.5: Try without service parameter
+    try {
+      const tokenResponse = await fetch(`${moodleUrl}/login/token.php`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          username: adminUsername,
+          password: adminPassword,
+        }),
+      });
+
+      if (tokenResponse.ok) {
+        const tokenData = await tokenResponse.json();
+
+        if (tokenData.token) {
+          console.log(
+            "✅ Token generated successfully via REST API (no service)"
+          );
+          return res.json({
+            token: tokenData.token,
+            method: "rest_api_no_service",
+          });
+        } else {
+          console.log("⚠️ REST API (no service) failed:", tokenData.error);
+        }
+      }
+    } catch (restError) {
+      console.log("⚠️ REST API (no service) method failed:", restError);
+    }
+
+    // Method 2: Try web service token generation
+    try {
+      const wsTokenResponse = await fetch(
+        `${moodleUrl}/webservice/rest/server.php`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            wsfunction: "core_user_create_user_key",
+            username: adminUsername,
+            password: adminPassword,
+            service: "mediverse_api",
+            wstoken: "placeholder", // This might work for admin
+          }),
+        }
+      );
+
+      if (wsTokenResponse.ok) {
+        const wsData = await wsTokenResponse.json();
+        if (wsData.key) {
+          console.log("✅ Token generated successfully via Web Service");
+          return res.json({
+            token: wsData.key,
+            method: "web_service",
+          });
+        }
+      }
+    } catch (wsError) {
+      console.log("⚠️ Web Service method failed:", wsError);
+    }
+
+    // Method 3: If all methods fail, return error
+    console.log("❌ All token generation methods failed");
+    res.status(500).json({
+      error: "Failed to generate Moodle API token",
+      details:
+        "Moodle is not accessible or not properly configured. Please ensure Moodle is running and admin credentials are correct.",
+    });
+  } catch (error) {
+    console.error("❌ Token generation error:", error);
+    res.status(500).json({
+      error: "Failed to generate Moodle token",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
+// Moodle Health Check
+app.get("/api/moodle/health", async (req, res) => {
+  try {
+    const moodleUrl = process.env.MOODLE_URL || "http://localhost:8081";
+
+    // Check if Moodle is accessible
+    const healthResponse = await fetch(`${moodleUrl}/`, {
+      method: "GET",
+      timeout: 5000,
+    });
+
+    if (healthResponse.ok) {
+      res.json({
+        status: "healthy",
+        moodleUrl,
+        accessible: true,
+      });
+    } else {
+      res.status(503).json({
+        status: "unhealthy",
+        moodleUrl,
+        accessible: false,
+        statusCode: healthResponse.status,
+      });
+    }
+  } catch (error) {
+    res.status(503).json({
+      status: "unhealthy",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
 });
 
 // Anatomy Parts Endpoints

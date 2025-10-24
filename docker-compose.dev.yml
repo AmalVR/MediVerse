@@ -1,16 +1,14 @@
-version: "3.8"
-
-# Development Docker Compose
-# Run with: docker-compose -f docker-compose.dev.yml up
+# Development Docker Compose with optimized builds
+# Run with: ./scripts/dev-environment.sh setup
 
 services:
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
-    container_name: mediverse-db-dev
+    container_name: mediverse-postgres-dev
     restart: unless-stopped
     environment:
-      POSTGRES_DB: mediverse
+      POSTGRES_DB: postgres
       POSTGRES_USER: mediverse
       POSTGRES_PASSWORD: mediverse_password
       PGDATA: /var/lib/postgresql/data/pgdata
@@ -18,13 +16,15 @@ services:
       - "5432:5432"
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
     networks:
-      - mediverse-dev
+      - mediverse-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mediverse"]
-      interval: 5s
-      timeout: 3s
-      retries: 3
+      test: ["CMD-SHELL", "pg_isready -U mediverse -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # Redis for caching
   redis:
@@ -34,36 +34,75 @@ services:
     ports:
       - "6379:6379"
     networks:
-      - mediverse-dev
+      - mediverse-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
-  # Moodle LMS (Development)
-  moodle:
-    image: php:8.2-apache
-    container_name: mediverse-moodle-dev
+  # API Service (optimized build)
+  api:
+    image: mediverse-dev-api:latest
+    container_name: mediverse-api-dev
     restart: unless-stopped
     environment:
-      - APACHE_DOCUMENT_ROOT=/var/www/html
+      NODE_ENV: development
+      DATABASE_URL: postgresql://mediverse:mediverse_password@postgres:5432/mediverse
+      MOODLE_DB_URL: postgresql://mediverse:mediverse_password@postgres:5432/moodle
+      MOODLE_URL: http://moodle:80
+      MOODLE_API_URL: http://moodle:80/webservice/rest/server.php
+      MOODLE_API_TOKEN: ${MOODLE_API_TOKEN:-placeholder_token}
+      MOODLE_OAUTH_CLIENT_ID: ${VITE_MOODLE_OAUTH_CLIENT_ID:-placeholder_client_id}
+      MOODLE_OAUTH_CLIENT_SECRET: ${VITE_MOODLE_OAUTH_CLIENT_SECRET:-placeholder_client_secret}
+      MOODLE_OAUTH_REDIRECT_URI: ${VITE_MOODLE_OAUTH_REDIRECT_URI:-http://localhost:8080}
+      REDIS_URL: redis://redis:6379
     ports:
-      - "8081:80"
-    volumes:
-      - moodle_dev_data:/var/www/html
+      - "3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./server:/app/server
+      - ./prisma:/app/prisma
+      - ./generated:/app/generated
+      - ./node_modules/.prisma:/app/node_modules/.prisma
+      - ./.env:/app/.env:ro
     networks:
-      - mediverse-dev
-    command: >
-      bash -c "
-        apt-get update &&
-        apt-get install -y wget unzip libzip-dev libpng-dev libjpeg-dev libfreetype6-dev libpq-dev &&
-        docker-php-ext-install gd zip pdo pdo_pgsql &&
-        wget https://download.moodle.org/download.php/direct/stable403/moodle-latest-403.zip &&
-        unzip moodle-latest-403.zip &&
-        mv moodle/* /var/www/html/ &&
-        chown -R www-data:www-data /var/www/html &&
-        chmod -R 755 /var/www/html &&
-        apache2-foreground
-      "
+      - mediverse-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Moodle LMS (optimized build)
+  moodle:
+    image: mediverse-dev-moodle:latest
+    container_name: mediverse-moodle-dev
+    restart: unless-stopped
+    environment:
+      OAUTH_CLIENT_ID: ${VITE_MOODLE_OAUTH_CLIENT_ID:-placeholder_client_id}
+      OAUTH_CLIENT_SECRET: ${VITE_MOODLE_OAUTH_CLIENT_SECRET:-placeholder_client_secret}
+    ports:
+      - "8081:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - moodle_dev_data:/var/moodledata
+      - ./docker/moodle:/docker-entrypoint-initdb.d
+    networks:
+      - mediverse-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # pgAdmin for database management
   pgadmin:
@@ -79,23 +118,30 @@ services:
     volumes:
       - pgadmin_dev_data:/var/lib/pgadmin
     networks:
-      - mediverse-dev
+      - mediverse-network
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
 networks:
-  mediverse-dev:
+  mediverse-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
 
 volumes:
   postgres_dev_data:
   pgadmin_dev_data:
   moodle_dev_data:
-# For development:
-# 1. Run: docker-compose -f docker-compose.dev.yml up -d
-# 2. Run frontend locally: npm run dev
-# 3. Run API locally: npm run server:api
-# 4. Run WebSocket locally: npm run server:ws
+# Development workflow:
+# 1. Run: ./scripts/dev-environment.sh setup
+# 2. This will build optimized images and start all services
+# 3. Frontend runs locally: npm run dev
+# 4. API and Moodle run in Docker with proper networking
 #
-# This gives you hot reload while using Docker for infrastructure
-
+# Benefits:
+# - Images are built once and cached
+# - Proper health checks and dependencies
+# - Isolated network for better connectivity
+# - Automatic database initialization

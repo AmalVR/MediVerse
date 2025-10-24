@@ -104,11 +104,36 @@ services:
 
   # Moodle LMS
   moodle:
-    image: php:8.2-apache
+    image: moodlehq/moodle-php-apache:8.2
     container_name: mediverse-moodle
     restart: unless-stopped
     environment:
-      - APACHE_DOCUMENT_ROOT=/var/www/html
+      # Database Configuration (PostgreSQL)
+      - MOODLE_DATABASE_TYPE=pgsql
+      - MOODLE_DATABASE_HOST=postgres
+      - MOODLE_DATABASE_PORT=5432
+      - MOODLE_DATABASE_NAME=moodle
+      - MOODLE_DATABASE_USER=mediverse
+      - MOODLE_DATABASE_PASSWORD=mediverse_password
+
+      # Site Configuration
+      - MOODLE_SITE_NAME=MediVerse LMS
+      - MOODLE_SITE_SHORTNAME=mediverse
+      - MOODLE_SITE_SUMMARY=MediVerse Learning Management System
+      - MOODLE_SITE_LANG=en
+      - MOODLE_SITE_TIMEZONE=UTC
+
+      # Admin Configuration
+      - MOODLE_ADMIN_USER=admin
+      - MOODLE_ADMIN_PASSWORD=admin123!
+      - MOODLE_ADMIN_EMAIL=admin@mediverse.com
+      - MOODLE_ADMIN_FIRSTNAME=Admin
+      - MOODLE_ADMIN_LASTNAME=User
+
+      # Installation Settings
+      - MOODLE_SKIP_INSTALL=no
+      - MOODLE_SKIP_BOOTSTRAP=no
+      - APACHE_HTTP_PORT_NUMBER=80
     ports:
       - "8081:80"
     volumes:
@@ -118,18 +143,6 @@ services:
         condition: service_healthy
     networks:
       - mediverse-network
-    command: >
-      bash -c "
-        apt-get update &&
-        apt-get install -y wget unzip libzip-dev libpng-dev libjpeg-dev libfreetype6-dev libpq-dev &&
-        docker-php-ext-install gd zip pdo pdo_pgsql &&
-        wget https://download.moodle.org/download.php/direct/stable403/moodle-latest-403.zip &&
-        unzip moodle-latest-403.zip &&
-        mv moodle/* /var/www/html/ &&
-        chown -R www-data:www-data /var/www/html &&
-        chmod -R 755 /var/www/html &&
-        apache2-foreground
-      "
 
   # pgAdmin (optional - for database management)
   pgadmin:

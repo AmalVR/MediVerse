@@ -35,7 +35,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -592,7 +592,7 @@ export function StudentProgress({
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <Tooltip />
+                  <RechartsTooltip />
                   <Line
                     type="monotone"
                     dataKey="quizzes"
@@ -633,7 +633,7 @@ export function StudentProgress({
                         />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <RechartsTooltip />
                   </RechartsPieChart>
                 </ResponsiveContainer>
 
