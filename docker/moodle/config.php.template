@@ -1,0 +1,43 @@
+<?php
+// Moodle configuration template
+// This file will be processed by the installation script
+
+unset($CFG);
+global $CFG;
+$CFG = new stdClass();
+
+$CFG->dbtype    = 'pgsql';
+$CFG->dblibrary = 'native';
+$CFG->dbhost    = 'postgres';
+$CFG->dbname    = 'moodle';
+$CFG->dbuser    = 'mediverse';
+$CFG->dbpass    = 'mediverse_password';
+$CFG->prefix    = 'mdl_';
+$CFG->dboptions = array(
+    'dbpersist' => 0,
+    'dbport' => 5432,
+    'dbsocket' => '',
+    'dbcollation' => 'utf8mb4_unicode_ci',
+);
+
+$CFG->wwwroot   = 'http://localhost:8081';
+$CFG->dataroot  = '/var/moodledata';
+$CFG->admin     = 'admin';
+
+$CFG->directorypermissions = 0777;
+
+// Performance settings
+$CFG->cachejs = true;
+$CFG->cachetemplates = true;
+$CFG->cachetext = true;
+
+// Security settings
+$CFG->passwordpolicy = 0;
+$CFG->loginpasswordautocomplete = 0;
+
+// OAuth settings
+$CFG->oauth2_issuer = 'https://accounts.google.com';
+$CFG->oauth2_client_id = '{{OAUTH_CLIENT_ID}}';
+$CFG->oauth2_client_secret = '{{OAUTH_CLIENT_SECRET}}';
+
+require_once(__DIR__ . '/lib/setup.php');

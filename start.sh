@@ -45,6 +45,67 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Kill existing instances
+kill_existing_instances() {
+    print_info "Checking for existing instances..."
+    
+    local killed_processes=()
+    
+    # Kill Vite dev server
+    if pgrep -f "vite" >/dev/null 2>&1; then
+        print_info "Stopping existing Vite dev server..."
+        pkill -f "vite" || true
+        killed_processes+=("Vite dev server")
+    fi
+    
+    # Kill Node.js server processes (API + WebSocket)
+    if pgrep -f "tsx watch.*server" >/dev/null 2>&1; then
+        print_info "Stopping existing server processes..."
+        pkill -f "tsx watch.*server" || true
+        killed_processes+=("Server processes")
+    fi
+    
+    # Kill concurrently processes
+    if pgrep -f "concurrently" >/dev/null 2>&1; then
+        print_info "Stopping existing concurrently processes..."
+        pkill -f "concurrently" || true
+        killed_processes+=("Concurrently processes")
+    fi
+    
+    # Kill any Node.js processes on our ports
+    if command_exists lsof; then
+        # Kill processes on port 3000 (API)
+        if lsof -ti:3000 >/dev/null 2>&1; then
+            print_info "Stopping process on port 3000..."
+            lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+            killed_processes+=("Port 3000")
+        fi
+        
+        # Kill processes on port 3001 (WebSocket)
+        if lsof -ti:3001 >/dev/null 2>&1; then
+            print_info "Stopping process on port 3001..."
+            lsof -ti:3001 | xargs kill -9 2>/dev/null || true
+            killed_processes+=("Port 3001")
+        fi
+        
+        # Kill processes on port 5173 (Vite)
+        if lsof -ti:5173 >/dev/null 2>&1; then
+            print_info "Stopping process on port 5173..."
+            lsof -ti:5173 | xargs kill -9 2>/dev/null || true
+            killed_processes+=("Port 5173")
+        fi
+    fi
+    
+    if [ ${#killed_processes[@]} -gt 0 ]; then
+        print_success "Stopped existing instances: ${killed_processes[*]}"
+        sleep 2  # Give processes time to fully terminate
+    else
+        print_success "No existing instances found"
+    fi
+    
+    echo ""
+}
+
 # Check prerequisites
 check_prerequisites() {
     print_info "Checking prerequisites..."
@@ -223,6 +284,7 @@ setup_database() {
 
 # Start development servers
 start_servers() {
+    kill_existing_instances
     print_info "Starting development servers..."
     
     echo ""

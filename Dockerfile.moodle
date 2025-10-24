@@ -1,0 +1,92 @@
+# Dockerfile.moodle
+# Optimized Moodle build with caching
+
+FROM php:8.2-apache
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    libzip-dev \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    libpng-dev \
+    libxml2-dev \
+    libonig-dev \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    libicu-dev \
+    libmemcached-dev \
+    libmagickwand-dev \
+    git \
+    curl \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        gd \
+        zip \
+        pdo \
+        pdo_pgsql \
+        mysqli \
+        pdo_mysql \
+        xml \
+        curl \
+        mbstring \
+        intl \
+        opcache
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Configure Apache
+RUN a2enmod rewrite
+RUN a2enmod ssl
+
+# Copy Apache configuration
+COPY docker/moodle/apache.conf /etc/apache2/sites-available/000-default.conf
+
+# Set PHP configuration
+RUN echo "memory_limit = 512M" >> /usr/local/etc/php/conf.d/moodle.ini \
+    && echo "max_execution_time = 300" >> /usr/local/etc/php/conf.d/moodle.ini \
+    && echo "upload_max_filesize = 100M" >> /usr/local/etc/php/conf.d/moodle.ini \
+    && echo "post_max_size = 100M" >> /usr/local/etc/php/conf.d/moodle.ini
+
+# Create moodle user
+RUN useradd -m -s /bin/bash moodle
+
+# Download and install Moodle
+RUN cd /var/www/html \
+    && git clone https://github.com/moodle/moodle.git . \
+    && git checkout MOODLE_402_STABLE \
+    && chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html
+
+# Install Moodle dependencies
+RUN composer install --no-dev --optimize-autoloader
+
+# Create data directory
+RUN mkdir -p /var/moodledata \
+    && chown -R www-data:www-data /var/moodledata \
+    && chmod -R 777 /var/moodledata
+
+# Copy Moodle configuration template
+COPY docker/moodle/config.php.template /var/www/html/config.php.template
+
+# Copy installation script
+COPY docker/moodle/install-moodle.sh /usr/local/bin/install-moodle.sh
+RUN chmod +x /usr/local/bin/install-moodle.sh
+
+# Expose port
+EXPOSE 80
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost/ || exit 1
+
+# Start Apache
+CMD ["apache2-foreground"]

@@ -35,10 +35,17 @@ help:
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev            Start frontend dev server"
-	@echo "  make dev-full       Full development setup (clean + rebuild + start)"
-	@echo "  make dev-clean      Clean development artifacts"
-	@echo "  make dev-rebuild    Rebuild development environment"
-	@echo "  make dev-status     Show development status"
+	@echo "  make dev-setup      Set up complete development environment"
+	@echo "  make dev-start      Start existing development services"
+	@echo "  make dev-stop       Stop all development services"
+	@echo "  make dev-status     Show development environment status"
+	@echo "  make dev-rebuild    Rebuild images and restart services"
+	@echo "  make dev-quick      Quick start (assumes images built)"
+	@echo "  make dev-logs       Show logs for all services"
+	@echo "  make dev-logs-api   Show API logs"
+	@echo "  make dev-logs-moodle Show Moodle logs"
+	@echo "  make dev-logs-db    Show database logs"
+	@echo "  make dev-fix-db     Fix database connectivity issues"
 	@echo "  make server         Start backend servers"
 	@echo ""
 	@echo "Models:"
@@ -253,3 +260,50 @@ dev-safe:
 oauth-status:
 	@echo "📊 Checking OAuth status..."
 	@./scripts/oauth-status.sh
+
+# Development Environment Management
+dev-setup: ## Set up complete development environment
+	@echo "🚀 Setting up development environment..."
+	@./scripts/dev-environment.sh setup
+
+dev-start: ## Start existing development services
+	@echo "▶️ Starting development services..."
+	@./scripts/dev-environment.sh start
+
+dev-stop: ## Stop all development services
+	@echo "⏹️ Stopping development services..."
+	@./scripts/dev-environment.sh stop
+
+dev-status: ## Show development environment status
+	@echo "📊 Development environment status:"
+	@./scripts/dev-environment.sh status
+
+dev-rebuild: ## Rebuild images and restart services
+	@echo "🔨 Rebuilding development environment..."
+	@./scripts/dev-environment.sh rebuild
+
+# Quick development commands
+dev-quick: ## Quick start (assumes images are already built)
+	@echo "⚡ Quick start development environment..."
+	@docker compose -f docker-compose.dev.yml up -d
+	@echo "✅ Services started. Run 'npm run dev' for frontend."
+
+dev-logs: ## Show logs for all services
+	@echo "📋 Showing logs for all services..."
+	@docker compose -f docker-compose.dev.yml logs -f
+
+dev-logs-api: ## Show API logs
+	@echo "📋 Showing API logs..."
+	@docker compose -f docker-compose.dev.yml logs -f api
+
+dev-logs-moodle: ## Show Moodle logs
+	@echo "📋 Showing Moodle logs..."
+	@docker compose -f docker-compose.dev.yml logs -f moodle
+
+dev-logs-db: ## Show database logs
+	@echo "📋 Showing database logs..."
+	@docker compose -f docker-compose.dev.yml logs -f postgres
+
+dev-fix-db: ## Fix database connectivity issues
+	@echo "🔧 Fixing database connectivity issues..."
+	@./scripts/fix-database-connectivity.sh

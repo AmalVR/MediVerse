@@ -30,6 +30,73 @@ function Test-Command {
     return $?
 }
 
+# Kill existing instances
+function Stop-ExistingInstances {
+    Write-Info "Checking for existing instances..."
+    
+    $killedProcesses = @()
+    
+    # Kill Vite dev server
+    $viteProcesses = Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*vite*" }
+    if ($viteProcesses) {
+        Write-Info "Stopping existing Vite dev server..."
+        $viteProcesses | Stop-Process -Force -ErrorAction SilentlyContinue
+        $killedProcesses += "Vite dev server"
+    }
+    
+    # Kill Node.js server processes (API + WebSocket)
+    $serverProcesses = Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*tsx*watch*server*" }
+    if ($serverProcesses) {
+        Write-Info "Stopping existing server processes..."
+        $serverProcesses | Stop-Process -Force -ErrorAction SilentlyContinue
+        $killedProcesses += "Server processes"
+    }
+    
+    # Kill concurrently processes
+    $concurrentProcesses = Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*concurrently*" }
+    if ($concurrentProcesses) {
+        Write-Info "Stopping existing concurrently processes..."
+        $concurrentProcesses | Stop-Process -Force -ErrorAction SilentlyContinue
+        $killedProcesses += "Concurrently processes"
+    }
+    
+    # Kill any Node.js processes on our ports
+    if (Test-Command netstat) {
+        # Kill processes on port 3000 (API)
+        $port3000 = netstat -ano | Select-String ":3000 " | ForEach-Object { ($_ -split '\s+')[-1] } | Sort-Object -Unique
+        if ($port3000) {
+            Write-Info "Stopping process on port 3000..."
+            $port3000 | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
+            $killedProcesses += "Port 3000"
+        }
+        
+        # Kill processes on port 3001 (WebSocket)
+        $port3001 = netstat -ano | Select-String ":3001 " | ForEach-Object { ($_ -split '\s+')[-1] } | Sort-Object -Unique
+        if ($port3001) {
+            Write-Info "Stopping process on port 3001..."
+            $port3001 | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
+            $killedProcesses += "Port 3001"
+        }
+        
+        # Kill processes on port 5173 (Vite)
+        $port5173 = netstat -ano | Select-String ":5173 " | ForEach-Object { ($_ -split '\s+')[-1] } | Sort-Object -Unique
+        if ($port5173) {
+            Write-Info "Stopping process on port 5173..."
+            $port5173 | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
+            $killedProcesses += "Port 5173"
+        }
+    }
+    
+    if ($killedProcesses.Count -gt 0) {
+        Write-Success "Stopped existing instances: $($killedProcesses -join ', ')"
+        Start-Sleep -Seconds 2  # Give processes time to fully terminate
+    } else {
+        Write-Success "No existing instances found"
+    }
+    
+    Write-Host ""
+}
+
 # Check prerequisites
 function Test-Prerequisites {
     Write-Info "Checking prerequisites..."
@@ -151,6 +218,7 @@ function Initialize-Database {
 
 # Start servers
 function Start-Servers {
+    Stop-ExistingInstances
     Write-Info "Starting development servers..."
     Write-Host ""
     Write-Success "🚀 MediVerse is starting!"
